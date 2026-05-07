@@ -1,0 +1,7 @@
+.claude/
+HavenMap/.git_relic/
+Thumbs.db
+Desktop.ini
+*.log
+*.tmp
+node_modules/
