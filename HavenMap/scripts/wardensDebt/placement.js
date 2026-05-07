@@ -1,20 +1,4 @@
-import { wardensDebtMapTileForId } from './mapTiles.js';
-
 export const WARDENS_DEBT_GRID_SIZE = 32;
-
-export function wardensDebtPrimaryMapTile(runtime) {
-  const boardTile = runtime?.gameState?.board?.mapTiles?.[0];
-  if (!boardTile) {
-    const tileId = runtime?.gameState?.board?.mapTileIds?.[0];
-    return tileId ? wardensDebtMapTileForId(tileId) : null;
-  }
-  const base = wardensDebtMapTileForId(boardTile.id);
-  if (!base) return null;
-  return {
-    ...base,
-    ...boardTile,
-  };
-}
 
 export function wardensDebtFigurePosition(runtime, figureId) {
   const positions = runtime?.gameState?.board?.figurePositions || {};

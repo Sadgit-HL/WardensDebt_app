@@ -4,11 +4,8 @@ import { initControls, setZoom, setZoomAroundClient, getZoom, resetView, ZOOM_ST
 import { initDrag }                                    from './drag.js';
 import { initSidebar }                                 from './sidebar.js';
 import { initElements, renderElements }                from './elements.js';
-import { initLevel, renderLevel }                      from './level.js';
-import { initShare }                                   from './share.js';
 import { initMobile }                                  from './mobile.js';
 import { HEX_W, HEX_H, COLS, ROWS, hexCenter }        from './hex.js';
-import { GAME_NAME }                                   from './data.js';
 import { clearSelection }                              from './uiState.js';
 import { subscribeUI, uiState }                        from './uiState.js';
 import { initWardensDebtRuntime, subscribeWardensDebtRuntime, wdUndo, wdRedo, canWdUndo, canWdRedo } from './wardensDebt/runtime.js';
@@ -68,8 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initDrag(svgEl);
   initSidebar();
   initElements();
-  initLevel();
-  initShare();
   initMobile();
   void initWardensDebtRuntime();
 
@@ -129,8 +124,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Re-render whenever state changes
-  subscribe(() => { renderAll(state); renderElements(); renderLevel(); setGridLabelsVisible(state.showGridLabels); updateHistoryButtons(); });
-  subscribeWardensDebtRuntime(() => { renderAll(state); updateHistoryButtons(); });
+  subscribe(() => { renderAll(); renderElements(); setGridLabelsVisible(state.showGridLabels); updateHistoryButtons(); });
+  subscribeWardensDebtRuntime(() => { renderAll(); updateHistoryButtons(); });
   subscribeUI(() => { renderSelection(); });
 
   // Load from URL hash (triggers the subscriber above)

@@ -21,51 +21,12 @@ const listeners = [];
 export function subscribeUI(fn) { listeners.push(fn); }
 function notify() { listeners.forEach(fn => fn()); }
 
-export function selectHex(col, row) {
-  uiState.selectedHex  = { col, row };
-  uiState.selectedCell  = null;
-  uiState.selectedWdMapTile = null;
-  uiState.selected     = null;
-  uiState.stack        = [];
-  uiState.addPanelOpen = false;
-  uiState.mobilePanel  = 'selection';
-  uiState.mobileDetailsOpen = false;
-  uiState.mobileMoveMode = false;
-  notify();
-}
-
 export function selectObject(kind, idx, col, row) {
   uiState.selectedHex  = { col, row };
   uiState.selectedCell  = null;
   uiState.selectedWdMapTile = null;
   uiState.selected     = { kind, idx };
   uiState.stack        = [];
-  uiState.addPanelOpen = false;
-  uiState.mobilePanel  = 'selection';
-  uiState.mobileDetailsOpen = false;
-  uiState.mobileMoveMode = false;
-  notify();
-}
-
-export function showStack(objects, col, row) {
-  uiState.selectedHex  = { col, row };
-  uiState.selectedCell  = null;
-  uiState.selectedWdMapTile = null;
-  uiState.selected     = null;
-  uiState.stack        = objects;
-  uiState.addPanelOpen = false;
-  uiState.mobilePanel  = 'selection';
-  uiState.mobileDetailsOpen = false;
-  uiState.mobileMoveMode = false;
-  notify();
-}
-
-export function showStackWithSelection(objects, col, row, kind, idx) {
-  uiState.selectedHex  = { col, row };
-  uiState.selectedCell  = null;
-  uiState.selectedWdMapTile = null;
-  uiState.selected     = { kind, idx };
-  uiState.stack        = objects;
   uiState.addPanelOpen = false;
   uiState.mobilePanel  = 'selection';
   uiState.mobileDetailsOpen = false;

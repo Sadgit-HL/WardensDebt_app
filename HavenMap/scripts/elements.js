@@ -16,25 +16,12 @@ import {
   setWardensDebtGameState,
   subscribeWardensDebtRuntime,
 } from './wardensDebt/runtime.js';
-import { state, patch } from './state.js';
-import { ELEMENTS } from './games/common.js';
 import { uiState, selectFromStack, subscribeUI } from './uiState.js';
 
 let activeConvictIndex = 0;
 let statusMessage = '';
 let playbarExpanded = false;
 let selectedActiveCardRef = null;
-
-export function cycleElement(index) {
-  const els = [...state.elements];
-  els[index] = (els[index] + 1) % 3;
-  patch({ elements: els });
-}
-
-export function endOfRound() {
-  const els = state.elements.map(value => Math.max(0, value - 1));
-  patch({ elements: els });
-}
 
 function escapeHtml(value) {
   return String(value)
