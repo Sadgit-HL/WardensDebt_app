@@ -3,6 +3,7 @@ import {
   createWardensDebtGameState,
   validateWardensDebtGameState,
 } from './schema.js';
+import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from '../lzString.js';
 
 const runtimeState = {
   status: 'idle',
@@ -16,6 +17,104 @@ const runtimeState = {
 
 const listeners = [];
 let loadPromise = null;
+
+// ─── WD undo / redo ───────────────────────────────────────────────────────────
+
+const WD_HISTORY_LIMIT = 100;
+const wdUndoHashes = [];
+const wdRedoHashes = [];
+let wdHistoryFrozen = false;
+let wdPendingUndoEntry = null;
+
+function wdEncode(gameState) {
+  return gameState ? compressToEncodedURIComponent(JSON.stringify(gameState)) : null;
+}
+
+function wdDecode(encoded) {
+  return JSON.parse(decompressFromEncodedURIComponent(encoded));
+}
+
+function saveWdToUrl() {
+  const encoded = wdEncode(runtimeState.gameState);
+  const url = new URL(location.href);
+  if (encoded) url.searchParams.set('wd', encoded);
+  else url.searchParams.delete('wd');
+  history.replaceState(null, '', url.toString());
+}
+
+function pushWdUndo(encoded) {
+  if (!encoded || wdUndoHashes[wdUndoHashes.length - 1] === encoded) return;
+  wdUndoHashes.push(encoded);
+  if (wdUndoHashes.length > WD_HISTORY_LIMIT) wdUndoHashes.shift();
+}
+
+function clearWdRedo() { wdRedoHashes.length = 0; }
+
+function loadWdStateFromUrl() {
+  const encoded = new URLSearchParams(location.search).get('wd');
+  if (!encoded || !runtimeState.index) return;
+  try {
+    const saved = wdDecode(encoded);
+    const v = validateWardensDebtGameState(saved, runtimeState.index);
+    if (v.ok) runtimeState.gameState = saved;
+  } catch (e) {
+    console.warn('Could not restore WD state from URL:', e);
+  }
+}
+
+export function captureWdHistory() {
+  wdPendingUndoEntry = wdEncode(runtimeState.gameState);
+}
+
+export function freezeWdHistory() { wdHistoryFrozen = true; }
+
+export function commitWdHistory() {
+  if (wdPendingUndoEntry) {
+    pushWdUndo(wdPendingUndoEntry);
+    clearWdRedo();
+    wdPendingUndoEntry = null;
+  }
+  wdHistoryFrozen = false;
+}
+
+export function wdUndo() {
+  if (wdUndoHashes.length === 0 || runtimeState.status !== 'ready') return false;
+  const current = wdEncode(runtimeState.gameState);
+  const prev = wdUndoHashes.pop();
+  wdRedoHashes.push(current);
+  try {
+    runtimeState.gameState = wdDecode(prev);
+    saveWdToUrl();
+    notifyWardensDebtRuntime();
+    return true;
+  } catch (e) {
+    console.warn('WD undo failed:', e);
+    wdUndoHashes.push(prev);
+    wdRedoHashes.pop();
+    return false;
+  }
+}
+
+export function wdRedo() {
+  if (wdRedoHashes.length === 0 || runtimeState.status !== 'ready') return false;
+  const current = wdEncode(runtimeState.gameState);
+  const next = wdRedoHashes.pop();
+  wdUndoHashes.push(current);
+  try {
+    runtimeState.gameState = wdDecode(next);
+    saveWdToUrl();
+    notifyWardensDebtRuntime();
+    return true;
+  } catch (e) {
+    console.warn('WD redo failed:', e);
+    wdRedoHashes.push(next);
+    wdUndoHashes.pop();
+    return false;
+  }
+}
+
+export function canWdUndo() { return wdUndoHashes.length > 0; }
+export function canWdRedo() { return wdRedoHashes.length > 0; }
 
 function notifyWardensDebtRuntime() {
   listeners.forEach(listener => listener(runtimeState));
@@ -40,7 +139,12 @@ function validateAndCommitGameState(nextGameState) {
   if (!validation.ok) {
     throw new Error(`Wardens Debt game state validation failed:\n${validation.issues.join('\n')}`);
   }
+  if (!wdHistoryFrozen && runtimeState.gameState) {
+    pushWdUndo(wdEncode(runtimeState.gameState));
+    clearWdRedo();
+  }
   runtimeState.gameState = nextGameState;
+  saveWdToUrl();
   notifyWardensDebtRuntime();
   return cloneRuntimeState();
 }
@@ -85,6 +189,7 @@ export async function initWardensDebtRuntime({ scenarioId = null } = {}) {
       runtimeState.gameState = createWardensDebtGameState(content, scenario.id);
       runtimeState.status = 'ready';
       runtimeState.error = '';
+      loadWdStateFromUrl();
       notifyWardensDebtRuntime();
       return cloneRuntimeState();
     } catch (error) {

@@ -470,8 +470,7 @@
       "id": "location-cell-block-a",
       "name": "Placeholder Cell Block",
       "mapTileIds": [
-        "tile-cell-a",
-        "tile-hall-a"
+        "tile-41b"
       ],
       "monsterCardIds": [
         "monster-collector"
@@ -486,30 +485,24 @@
     }
   ],
   "mapTiles": [
-    {
-      "id": "tile-cell-a",
-      "name": "Placeholder Cell Tile",
-      "layoutKey": "cell-a",
-      "tags": [
-        "tile",
-        "room",
-        "print",
-        "component:board",
-        "print-group:map-tiles"
-      ]
-    },
-    {
-      "id": "tile-hall-a",
-      "name": "Placeholder Hall Tile",
-      "layoutKey": "hall-a",
-      "tags": [
-        "tile",
-        "hallway",
-        "print",
-        "component:board",
-        "print-group:map-tiles"
-      ]
-    }
+    { "id": "tile-02a", "name": "Tile 02a", "layoutKey": "02a", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] },
+    { "id": "tile-03a", "name": "Tile 03a", "layoutKey": "03a", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] },
+    { "id": "tile-04a", "name": "Tile 04a", "layoutKey": "04a", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] },
+    { "id": "tile-04b", "name": "Tile 04b", "layoutKey": "04b", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] },
+    { "id": "tile-07b", "name": "Tile 07b", "layoutKey": "07b", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] },
+    { "id": "tile-08a", "name": "Tile 08a", "layoutKey": "08a", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] },
+    { "id": "tile-08b", "name": "Tile 08b", "layoutKey": "08b", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] },
+    { "id": "tile-09b", "name": "Tile 09b", "layoutKey": "09b", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] },
+    { "id": "tile-10a", "name": "Tile 10a", "layoutKey": "10a", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] },
+    { "id": "tile-10b", "name": "Tile 10b", "layoutKey": "10b", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] },
+    { "id": "tile-11b", "name": "Tile 11b", "layoutKey": "11b", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] },
+    { "id": "tile-12a", "name": "Tile 12a", "layoutKey": "12a", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] },
+    { "id": "tile-12b", "name": "Tile 12b", "layoutKey": "12b", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] },
+    { "id": "tile-14b", "name": "Tile 14b", "layoutKey": "14b", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] },
+    { "id": "tile-15a", "name": "Tile 15a", "layoutKey": "15a", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] },
+    { "id": "tile-15b", "name": "Tile 15b", "layoutKey": "15b", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] },
+    { "id": "tile-16a", "name": "Tile 16a", "layoutKey": "16a", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] },
+    { "id": "tile-41b", "name": "Tile 41b", "layoutKey": "41b", "tags": ["tile", "room", "print", "component:board", "print-group:map-tiles"] }
   ],
   "decks": [
     {

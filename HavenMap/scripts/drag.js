@@ -1,10 +1,10 @@
 import { pixelToHex, hexCenter, footprintHexes, HEX_W, HEX_H, COLS, ROWS } from './hex.js';
 import { state, patch } from './state.js';
-import { uiState, selectHex, selectObject, showStack, showStackWithSelection, setMobileMoveMode, selectWardensDebtCell, selectWardensDebtMapTile } from './uiState.js';
+import { uiState, selectHex, selectObject, showStack, showStackWithSelection, setMobileMoveMode, selectWardensDebtCell, selectWardensDebtEmptyCell, selectWardensDebtMapTile } from './uiState.js';
 import { TILES, OVERLAY_OBJECTS, MONSTERS, MERCENARIES, SUMMONS, generateStandeeNum } from './data.js';
 import { panBy, setZoomAroundClient, getZoom } from './controls.js';
-import { getWardensDebtRuntime, updateWardensDebtGameState } from './wardensDebt/runtime.js';
-import { wardensDebtPrimaryMapTile, snapWardensDebtBoardPoint } from './wardensDebt/placement.js';
+import { getWardensDebtRuntime, updateWardensDebtGameState, captureWdHistory, freezeWdHistory, commitWdHistory } from './wardensDebt/runtime.js';
+import { snapWardensDebtBoardPoint } from './wardensDebt/placement.js';
 import { ROTATION_STEP } from './rotation.js';
 
 const SVG_NS         = 'http://www.w3.org/2000/svg';
@@ -122,13 +122,36 @@ function setWardensDebtFigurePosition(figureId, cell) {
   return true;
 }
 
+function createWdFigureCopy(wdFigure) {
+  let newId = null;
+  updateWardensDebtGameState(gameState => {
+    const originalPos = gameState.board.figurePositions?.[wdFigure.id];
+    if (!originalPos) return gameState;
+    gameState.board.figurePositions = { ...(gameState.board.figurePositions || {}) };
+    if (wdFigure.kind === 'wd-convict') {
+      const source = gameState.convicts.find(c => c.id === wdFigure.id);
+      if (!source) return gameState;
+      newId = `convict-${gameState.convicts.length + 1}`;
+      gameState.convicts = [...gameState.convicts, { ...source, id: newId }];
+      gameState.board.figurePositions[newId] = { x: originalPos.x, y: originalPos.y };
+    } else {
+      const source = gameState.enemies.find(e => e.instanceId === wdFigure.id);
+      if (!source) return gameState;
+      newId = `enemy-${gameState.enemies.length + 1}`;
+      gameState.enemies = [...gameState.enemies, { ...source, instanceId: newId }];
+      gameState.zones = { ...gameState.zones, board: [...(gameState.zones.board || []), newId] };
+      gameState.board.figurePositions[newId] = { x: originalPos.x, y: originalPos.y };
+    }
+    return gameState;
+  });
+  return newId;
+}
+
 function setWardensDebtMapTilePosition(tileId, x, y) {
   if (!tileId) return false;
   updateWardensDebtGameState(gameState => {
     gameState.board.mapTiles = (gameState.board.mapTiles || []).map(tile =>
-      tile.id === tileId
-        ? { ...tile, x: Math.max(0, Math.round(Number(x) || 0)), y: Math.max(0, Math.round(Number(y) || 0)) }
-        : tile
+      tile.id === tileId ? { ...tile, x: Math.round(x), y: Math.round(y) } : tile
     );
     return gameState;
   });
@@ -229,6 +252,45 @@ function updatePanCursor() {
 
 function rotateSelectedClockwise() {
   const sel = uiState.selected;
+
+  // WD figure
+  if (sel?.kind === 'wd-convict' || sel?.kind === 'wd-enemy') {
+    const runtime = getWardensDebtRuntime();
+    if (runtime.status !== 'ready' || !runtime.gameState) return false;
+    const isConvict = sel.kind === 'wd-convict';
+    const actor = isConvict
+      ? (runtime.gameState.convicts || [])[sel.idx]
+      : (runtime.gameState.enemies || [])[sel.idx];
+    if (!actor) return false;
+    const figureId = isConvict ? actor.id : actor.instanceId;
+    const current = runtime.gameState.board?.figurePositions?.[figureId] || {};
+    if (current.locked) return false;
+    updateWardensDebtGameState(gameState => {
+      gameState.board.figurePositions = {
+        ...(gameState.board.figurePositions || {}),
+        [figureId]: { ...current, angle: ((Number(current.angle) || 0) + ROTATION_STEP) % 360 },
+      };
+      return gameState;
+    });
+    return true;
+  }
+
+  // WD map tile
+  if (uiState.selectedWdMapTile?.id) {
+    const tileId = uiState.selectedWdMapTile.id;
+    const runtime = getWardensDebtRuntime();
+    if (runtime.status !== 'ready') return false;
+    const tile = (runtime.gameState?.board?.mapTiles || []).find(t => t.id === tileId);
+    if (tile?.locked) return false;
+    updateWardensDebtGameState(gameState => {
+      gameState.board.mapTiles = (gameState.board.mapTiles || []).map(t =>
+        t.id === tileId ? { ...t, angle: ((Number(t.angle) || 0) + ROTATION_STEP) % 360 } : t
+      );
+      return gameState;
+    });
+    return true;
+  }
+
   if (!sel) return false;
   const arr = arrForKind(sel.kind);
   const obj = arr[sel.idx];
@@ -269,7 +331,6 @@ function onKeyup(e) {
 function onMousedown(e) {
   if (e.button !== 0) return;
   const wdRuntime = getWardensDebtRuntime();
-  const wdMapTile = wdRuntime.status === 'ready' ? wardensDebtPrimaryMapTile(wdRuntime) : null;
   const wdFigure = wardensDebtFigureFromElement(e.target);
   const wdTile = wardensDebtMapTileFromElement(e.target);
   if (wdTile) {
@@ -303,6 +364,7 @@ function onMousedown(e) {
       clientX: e.clientX,
       clientY: e.clientY,
       wdFigure,
+      wdOriginalPos: position ? { x: position.x, y: position.y } : null,
       x: boardPoint.x,
       y: boardPoint.y,
       wdDrop: null,
@@ -343,7 +405,7 @@ function onMousedown(e) {
   const preferred = sel && allObjects.find(o => o.kind === sel.kind && o.idx === sel.idx);
   const token     = preferred ?? (allObjects.length > 0 ? sortByPriority(allObjects)[0] : null);
 
-  mouseStart = { clientX: e.clientX, clientY: e.clientY, col, row, token, allObjects, alt: e.altKey };
+  mouseStart = { clientX: e.clientX, clientY: e.clientY, x, y, col, row, token, allObjects, alt: e.altKey };
   hasDragged = false;
   if (isDraggable(token)) e.preventDefault();
 }
@@ -365,15 +427,27 @@ function onMousemove(e) {
     const dy = e.clientY - mouseStart.clientY;
     if (dx * dx + dy * dy < DRAG_THRESHOLD * DRAG_THRESHOLD) return;
     if (mouseStart.wdMapTile && mouseStart.wdMapTile.kind === 'wd-maptile') {
+      captureWdHistory();
+      freezeWdHistory();
       hasDragged = true;
       dragging = mouseStart.wdMapTile;
       document.body.style.cursor = 'grabbing';
       return;
     }
     if (mouseStart.wdFigure) {
+      captureWdHistory();
+      freezeWdHistory();
       hasDragged = true;
-      dragging = mouseStart.wdFigure;
-      document.body.style.cursor = 'grabbing';
+      isCopying = mouseStart.alt;
+      if (isCopying) {
+        const newId = createWdFigureCopy(mouseStart.wdFigure);
+        dragging = newId
+          ? { ...mouseStart.wdFigure, id: newId }
+          : mouseStart.wdFigure;
+      } else {
+        dragging = mouseStart.wdFigure;
+      }
+      document.body.style.cursor = isCopying ? 'copy' : 'grabbing';
       return;
     }
     if (!isDraggable(mouseStart.token)) { mouseStart = null; return; }
@@ -385,31 +459,16 @@ function onMousemove(e) {
 
   const { x, y } = toBoard(e.clientX, e.clientY);
   if (mouseStart.wdMapTile && mouseStart.wdMapTile.kind === 'wd-maptile') {
-    const wdRuntime = getWardensDebtRuntime();
-    const wdMapTile = wdRuntime.status === 'ready' ? wardensDebtPrimaryMapTile(wdRuntime) : null;
-    if (wdMapTile) {
-      const nextX = x - mouseStart.wdTileOffsetX;
-      const nextY = y - mouseStart.wdTileOffsetY;
-      setWardensDebtMapTilePosition(mouseStart.wdMapTile.id, nextX, nextY);
-      return;
-    }
+    const nextX = x - mouseStart.wdTileOffsetX;
+    const nextY = y - mouseStart.wdTileOffsetY;
+    setWardensDebtMapTilePosition(mouseStart.wdMapTile.id, nextX, nextY);
     return;
   }
   if (mouseStart.wdFigure) {
     const snapped = snapWardensDebtBoardPoint({ x, y });
     if (snapped) {
       mouseStart.wdDrop = snapped;
-      setWardensDebtFigurePosition(mouseStart.wdFigure.id, snapped);
-      if (!highlightEl) {
-        highlightEl = document.createElementNS(SVG_NS, 'rect');
-        highlightEl.setAttribute('class', 'drag-highlight');
-        dragLayer.appendChild(highlightEl);
-      }
-      highlightEl.setAttribute('x', snapped.x - 16);
-      highlightEl.setAttribute('y', snapped.y - 16);
-      highlightEl.setAttribute('width', 32);
-      highlightEl.setAttribute('height', 32);
-      return;
+      setWardensDebtFigurePosition(dragging.id, snapped);
     }
     return;
   }
@@ -426,7 +485,6 @@ function onMouseup(e) {
   }
   if (!mouseStart) return;
   const wdRuntime = getWardensDebtRuntime();
-  const wdMapTile = wdRuntime.status === 'ready' ? wardensDebtPrimaryMapTile(wdRuntime) : null;
 
   if (hasDragged && dragging) {
     // ── Drag: commit object move ──────────────────────────────────────────────
@@ -443,19 +501,20 @@ function onMouseup(e) {
       hasDragged = false;
       removeHighlight();
       setWardensDebtMapTilePosition(sel.id, nextX, nextY);
+      commitWdHistory();
       selectWardensDebtMapTile(sel.id);
       return;
     }
-    if (dragging.wdFigure) {
-      const sel = dragging.wdFigure;
-      const dropCell = mouseStart.wdDrop;
+    if (dragging.kind === 'wd-convict' || dragging.kind === 'wd-enemy') {
+      const figureId = dragging.id;
       dragging = null;
       mouseStart = null;
       hasDragged = false;
+      isCopying = false;
       removeHighlight();
-      if (sel?.id) {
-        if (dropCell) selectWardensDebtCell(dropCell.x, dropCell.y);
-      }
+      commitWdHistory();
+      const pos = getWardensDebtRuntime().gameState?.board?.figurePositions?.[figureId];
+      if (pos) selectWardensDebtCell(pos.x, pos.y);
       return;
     }
     const snapped = pixelToHex(x, y);
@@ -485,7 +544,7 @@ function onMouseup(e) {
 
   } else {
     // ── Click: select object(s) or hex ────────────────────────────────────────
-    const { col, row, allObjects } = mouseStart;
+    const { col, row, x, y, allObjects } = mouseStart;
     const wdTile = mouseStart.wdMapTile;
     const wdFigure = mouseStart.wdFigure;
     mouseStart = null;
@@ -519,7 +578,10 @@ function onMouseup(e) {
       return;
     }
 
-    if (allObjects.length === 0) {
+    if (allObjects.length === 0 && getWardensDebtRuntime().status === 'ready') {
+      const snapped = snapWardensDebtBoardPoint({ x, y });
+      if (snapped) selectWardensDebtEmptyCell(snapped.x, snapped.y);
+    } else if (allObjects.length === 0) {
       selectHex(col, row);
     } else if (allObjects.length === 1) {
       selectObject(allObjects[0].kind, allObjects[0].idx, col, row);

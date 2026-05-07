@@ -11,12 +11,10 @@ import { HEX_W, HEX_H, COLS, ROWS, hexCenter }        from './hex.js';
 import { GAME_NAME }                                   from './data.js';
 import { clearSelection }                              from './uiState.js';
 import { subscribeUI, uiState }                        from './uiState.js';
-import { initWardensDebtRuntime, subscribeWardensDebtRuntime } from './wardensDebt/runtime.js';
+import { initWardensDebtRuntime, subscribeWardensDebtRuntime, wdUndo, wdRedo, canWdUndo, canWdRedo } from './wardensDebt/runtime.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.title = `HavenMap — ${GAME_NAME}`;
-  const gameNameLabel = document.getElementById('sidebar-game-name');
-  if (gameNameLabel) gameNameLabel.textContent = GAME_NAME;
+  document.title = `Warden's Debt`;
   const svgEl = document.getElementById('board-svg');
   const undoBtn = document.getElementById('undo-btn');
   const redoBtn = document.getElementById('redo-btn');
@@ -76,18 +74,21 @@ document.addEventListener('DOMContentLoaded', () => {
   void initWardensDebtRuntime();
 
   function updateHistoryButtons() {
-    if (undoBtn) undoBtn.disabled = !canUndo();
-    if (redoBtn) redoBtn.disabled = !canRedo();
+    if (undoBtn) undoBtn.disabled = !canWdUndo() && !canUndo();
+    if (redoBtn) redoBtn.disabled = !canWdRedo() && !canRedo();
   }
+
+  function performUndo() { return wdUndo() || undo(); }
+  function performRedo() { return wdRedo() || redo(); }
 
   // Zoom buttons
   document.getElementById('zoom-in') ?.addEventListener('click', () => applyZoom(getZoom() + ZOOM_STEP));
   document.getElementById('zoom-out')?.addEventListener('click', () => applyZoom(getZoom() - ZOOM_STEP));
   undoBtn?.addEventListener('click', () => {
-    if (undo()) clearSelection();
+    if (performUndo()) clearSelection();
   });
   redoBtn?.addEventListener('click', () => {
-    if (redo()) clearSelection();
+    if (performRedo()) clearSelection();
   });
 
   // Mouse wheel zooms the board directly; page scrollbars are intentionally hidden.
@@ -104,12 +105,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!(e.ctrlKey || e.metaKey)) return;
     const key = e.key.toLowerCase();
     if (key === 'z' && !e.shiftKey) {
-      if (undo()) {
+      if (performUndo()) {
         clearSelection();
         e.preventDefault();
       }
     } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
-      if (redo()) {
+      if (performRedo()) {
         clearSelection();
         e.preventDefault();
       }
@@ -129,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Re-render whenever state changes
   subscribe(() => { renderAll(state); renderElements(); renderLevel(); setGridLabelsVisible(state.showGridLabels); updateHistoryButtons(); });
-  subscribeWardensDebtRuntime(() => { renderAll(state); });
+  subscribeWardensDebtRuntime(() => { renderAll(state); updateHistoryButtons(); });
   subscribeUI(() => { renderSelection(); });
 
   // Load from URL hash (triggers the subscriber above)

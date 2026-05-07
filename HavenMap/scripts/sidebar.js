@@ -25,6 +25,7 @@ import {
 import {
   wardensDebtFigurePosition,
 } from './wardensDebt/placement.js';
+import { WARDENS_DEBT_MAP_TILES } from './wardensDebt/mapTiles.js';
 
 // ─── Kind → state key + data table ───────────────────────────────────────────
 
@@ -120,7 +121,7 @@ function deleteWardensDebtFigure(figureId) {
   });
 }
 
-function addWardensDebtPlaceholderFigure(kind) {
+function addWardensDebtPlaceholderFigure(kind, defId) {
   const runtime = getWardensDebtRuntime();
   if (runtime.status !== 'ready' || !runtime.gameState || !runtime.index) return false;
 
@@ -134,7 +135,8 @@ function addWardensDebtPlaceholderFigure(kind) {
     gameState.board.figurePositions = { ...(gameState.board.figurePositions || {}) };
 
     if (kind === 'convict') {
-      const source = [...runtime.index.convictDefsById.values()][0];
+      const source = (defId && runtime.index.convictDefsById.get(defId))
+        || [...runtime.index.convictDefsById.values()][0];
       if (!source) return gameState;
       const nextIndex = gameState.convicts.length + 1;
       const id = `convict-${nextIndex}`;
@@ -160,7 +162,8 @@ function addWardensDebtPlaceholderFigure(kind) {
     }
 
     if (kind === 'enemy') {
-      const source = [...runtime.index.monsterCardsById.values()][0];
+      const source = (defId && runtime.index.monsterCardsById.get(defId))
+        || [...runtime.index.monsterCardsById.values()][0];
       if (!source) return gameState;
       const nextIndex = gameState.enemies.length + 1;
       const instanceId = `enemy-${nextIndex}`;
@@ -187,17 +190,20 @@ function addWardensDebtPlaceholderFigure(kind) {
   });
 }
 
-function addWardensDebtPlaceholderMapTile() {
+function addWardensDebtPlaceholderMapTile(tileId) {
+  if (!tileId || !WARDENS_DEBT_MAP_TILES[tileId]) return false;
   const runtime = getWardensDebtRuntime();
   if (runtime.status !== 'ready' || !runtime.gameState) return false;
-  const tileIds = runtime.gameState.board?.mapTileIds || [];
-  if (tileIds.includes('tile-cell-a')) return false;
+  const def = WARDENS_DEBT_MAP_TILES[tileId];
+  const cell = uiState.selectedCell;
+  const x = cell ? Math.round(cell.x) : def.x;
+  const y = cell ? Math.round(cell.y) : def.y;
 
   return updateWardensDebtGameState(gameState => {
-    gameState.board.mapTileIds = [...(gameState.board.mapTileIds || []), 'tile-cell-a'];
+    gameState.board.mapTileIds = [...(gameState.board.mapTileIds || []), tileId];
     gameState.board.mapTiles = [
       ...(gameState.board.mapTiles || []),
-      { id: 'tile-cell-a', x: 240, y: 80, angle: 0, locked: false },
+      { id: tileId, x, y, angle: 0, locked: false },
     ];
     if (!gameState.board.figurePositions) {
       gameState.board.figurePositions = {};
@@ -454,8 +460,33 @@ export function initSidebar() {
   window.addEventListener('keydown', e => {
     if (e.key !== 'Delete' && e.key !== 'Backspace') return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+    if (uiState.selectedWdMapTile?.id) {
+      const tileId = uiState.selectedWdMapTile.id;
+      const runtime = getWardensDebtRuntime();
+      const tile = runtime.gameState?.board?.mapTiles?.find(t => t.id === tileId);
+      if (tile?.locked) return;
+      e.preventDefault();
+      deleteWardensDebtMapTile(tileId);
+      clearSelection();
+      return;
+    }
+
     const sel = uiState.selected;
     if (!sel) return;
+
+    if (isWardensDebtKind(sel.kind)) {
+      const ctx = wardensDebtSelectionContext(sel);
+      if (!ctx) return;
+      const figureId = sel.kind === 'wd-convict' ? ctx.obj.id : ctx.obj.instanceId;
+      const pos = ctx.runtime.gameState?.board?.figurePositions?.[figureId];
+      if (pos?.locked) return;
+      e.preventDefault();
+      deleteWardensDebtFigure(figureId);
+      clearSelection();
+      return;
+    }
+
     const arr = arrForKind(sel.kind);
     const obj = arr[sel.idx];
     if (!obj || obj.locked) return;
@@ -484,7 +515,7 @@ export function initSidebar() {
       else clearSelection();
       e.preventDefault();
     } else if (key === 'a') {
-      if (uiState.selectedHex) {
+      if (uiState.selectedHex || uiState.selectedCell) {
         if (uiState.addPanelOpen) closeAddPanel();
         else openAddPanel();
         e.preventDefault();
@@ -752,8 +783,17 @@ function selectedObject() {
 }
 
 function toggleSelectedLock() {
+  if (uiState.selectedWdMapTile?.id) {
+    updateWardensDebtMapTile(uiState.selectedWdMapTile.id, tile => ({ ...tile, locked: !tile.locked }));
+    return true;
+  }
   const ctx = selectedObject();
-  if (!ctx || isWardensDebtKind(ctx.sel.kind)) return false;
+  if (!ctx) return false;
+  if (isWardensDebtKind(ctx.sel.kind)) {
+    const figureId = ctx.sel.kind === 'wd-convict' ? ctx.obj.id : ctx.obj.instanceId;
+    updateWardensDebtFigurePosition(figureId, pos => ({ ...pos, locked: !pos.locked }));
+    return true;
+  }
   patchKind(ctx.sel.kind, ctx.arr.map((x, i) => i === ctx.sel.idx ? { ...x, locked: !x.locked } : x));
   return true;
 }
@@ -820,6 +860,15 @@ function moveSelectedInKind(delta) {
 }
 
 function frameSelectedHex() {
+  if (uiState.selectedCell) {
+    centerBoardPoint(uiState.selectedCell.x, uiState.selectedCell.y);
+    return true;
+  }
+  if (uiState.selectedWdMapTile?.id) {
+    const runtime = getWardensDebtRuntime();
+    const tile = (runtime.gameState?.board?.mapTiles || []).find(t => t.id === uiState.selectedWdMapTile.id);
+    if (tile) { centerBoardPoint(tile.x, tile.y); return true; }
+  }
   const hex = uiState.selectedHex;
   if (!hex) return false;
   const center = hexCenter(hex.col, hex.row);
@@ -881,11 +930,11 @@ function handleAction(dataset) {
   if (action === 'wd-select') { selectFromStack(dataset.kind, Number(dataset.idx)); return; }
   if (action === 'wd-show-roster') { clearSelection(); return; }
   if (action === 'wd-add-figure') {
-    addWardensDebtPlaceholderFigure(dataset.figureKind);
+    addWardensDebtPlaceholderFigure(dataset.figureKind, dataset.figureDefId);
     return;
   }
   if (action === 'wd-add-maptile') {
-    addWardensDebtPlaceholderMapTile();
+    addWardensDebtPlaceholderMapTile(dataset.tileId);
     return;
   }
   if (action === 'wd-rotate-ccw' || action === 'wd-rotate-cw' || action === 'wd-toggle-lock' || action === 'wd-remove-maptile') {
@@ -1114,9 +1163,7 @@ function render() {
     html = objectPanel(selected.kind, selected.idx);
   } else if (uiState.selectedCell) {
     html = `<div class="sp-obj-header sp-obj-header--stack">
-            <div class="sp-type">Cell</div>
-            <div class="sp-name">${escHtml(Math.round(uiState.selectedCell.x) + ', ' + Math.round(uiState.selectedCell.y))}</div>
-            <div class="sp-meta-line">Square placement cell</div>
+            <div class="sp-name">CELL EMPTY</div>
           </div>`;
   } else {
     const { col, row } = selectedHex;
@@ -1572,17 +1619,8 @@ function wardensDebtObjectPanel(kind, idx) {
 
   const hpValue = isConvict ? Number(obj.health) || 0 : Number(obj.currentHealth) || 0;
   const extraTiles = isConvict
-      ? [
-        readOnlyCounter('Guard', Number(obj.guards) || 0, '#6b7da8'),
-        readOnlyCounter('Resources', Number(obj.resources) || 0, '#9a7f5e'),
-        readOnlyCounter('Hand', Array.isArray(obj.hand) ? obj.hand.length : 0, '#4a55b0'),
-        readOnlyCounter('Position', escHtml(positionLabel), '#507766'),
-      ].join('')
-    : [
-        readOnlyCounter('Attack', Number(obj.attack) || 0, '#8f4c38'),
-        readOnlyCounter('Zone', escHtml(obj.zone || 'board'), '#3d3d5c'),
-        readOnlyCounter('Position', escHtml(positionLabel), '#507766'),
-      ].join('');
+      ? ''
+    : '';
 
   return `
     <button class="sp-panel-back" data-action="wd-show-roster">&#8592; Roster</button>
@@ -1661,43 +1699,130 @@ function wardensDebtMapTilePanel(runtime, tileId) {
   `;
 }
 
+const WD_TABS = [
+  { key: 'convicts', label: 'Convicts'  },
+  { key: 'enemies',  label: 'Enemies'   },
+  { key: 'objects',  label: 'Objects'   },
+  { key: 'maptiles', label: 'Map Tiles' },
+];
+const WD_TAB_KEYS = new Set(WD_TABS.map(t => t.key));
+
+function wdConvictsTabBody(runtime, placement) {
+  const defs = [...runtime.index.convictDefsById.values()];
+  if (!defs.length) return hint('No convict definitions found.');
+  const dis = placement ? '' : 'disabled';
+  return `
+    <div class="ap-grid">
+      ${defs.map(def => `<button class="ap-item-btn ap-item-btn--monster" data-action="wd-add-figure" data-figure-kind="convict" data-figure-def-id="${escHtml(def.id)}" ${dis} title="${escHtml(def.name)}">${escHtml(def.name)}</button>`).join('')}
+    </div>
+    ${!placement ? `<div class="sp-meta-line">Select a cell to enable placement.</div>` : ''}
+  `;
+}
+
+function wdEnemiesTabBody(runtime, placement) {
+  const cards = [...runtime.index.monsterCardsById.values()];
+  if (!cards.length) return hint('No enemy cards found.');
+  const dis = placement ? '' : 'disabled';
+  return `
+    <div class="ap-grid">
+      ${cards.map(card => `<button class="ap-item-btn ap-item-btn--monster" data-action="wd-add-figure" data-figure-kind="enemy" data-figure-def-id="${escHtml(card.id)}" ${dis} title="${escHtml(card.name)}">${escHtml(card.name)}</button>`).join('')}
+    </div>
+    ${!placement ? `<div class="sp-meta-line">Select a cell to enable placement.</div>` : ''}
+  `;
+}
+
+function wdObjectsTabBody(runtime) {
+  const items = [...runtime.index.itemCardsById.values()];
+  if (!items.length) return hint('No item cards found.');
+  return `
+    <div class="ap-grid">
+      ${items.map(item => `<button class="ap-item-btn" title="${escHtml(item.name)}" disabled>${escHtml(item.name)}</button>`).join('')}
+    </div>
+  `;
+}
+
+function wdMapTilesTabBody() {
+  return `
+    <div class="ap-grid">
+      ${Object.keys(WARDENS_DEBT_MAP_TILES).map(tileId => {
+        const label = tileId.replace('tile-', '');
+        return `<button class="ap-item-btn ap-item-btn--tile" data-action="wd-add-maptile" data-tile-id="${tileId}" title="${escHtml(label)}">${escHtml(label)}</button>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function wdSearchBody(query, runtime, placement) {
+  const q = query.toLowerCase();
+  const dis = placement ? '' : 'disabled';
+  const results = [];
+
+  for (const def of runtime.index.convictDefsById.values()) {
+    if (def.name.toLowerCase().includes(q))
+      results.push(`<button class="ap-item-btn ap-item-btn--monster" data-action="wd-add-figure" data-figure-kind="convict" data-figure-def-id="${escHtml(def.id)}" ${dis} title="${escHtml(def.name)}">${escHtml(def.name)}</button>`);
+  }
+  for (const card of runtime.index.monsterCardsById.values()) {
+    if (card.name.toLowerCase().includes(q))
+      results.push(`<button class="ap-item-btn ap-item-btn--monster" data-action="wd-add-figure" data-figure-kind="enemy" data-figure-def-id="${escHtml(card.id)}" ${dis} title="${escHtml(card.name)}">${escHtml(card.name)}</button>`);
+  }
+  for (const item of runtime.index.itemCardsById.values()) {
+    if (item.name.toLowerCase().includes(q))
+      results.push(`<button class="ap-item-btn" title="${escHtml(item.name)}" disabled>${escHtml(item.name)}</button>`);
+  }
+  for (const tileId of Object.keys(WARDENS_DEBT_MAP_TILES)) {
+    const label = tileId.replace('tile-', '');
+    if (label.toLowerCase().includes(q))
+      results.push(`<button class="ap-item-btn ap-item-btn--tile" data-action="wd-add-maptile" data-tile-id="${tileId}" title="${escHtml(label)}">${escHtml(label)}</button>`);
+  }
+
+  if (!results.length) return `<div class="ap-empty">No results for "${escHtml(query)}"</div>`;
+  return `<div class="ap-grid">${results.join('')}</div>`;
+}
+
 function wdAddPanel() {
   const runtime = getWardensDebtRuntime();
-  const cellSelection = uiState.selectedCell;
-  const cellLabel = cellSelection
-    ? `${Math.round(cellSelection.x)}, ${Math.round(cellSelection.y)}`
-    : 'Select a cell first';
-  const placement = cellSelection
-    ? { x: Math.round(cellSelection.x), y: Math.round(cellSelection.y) }
-    : null;
-
   if (runtime.status !== 'ready' || !runtime.gameState) {
     return hint('Wardens Debt runtime unavailable');
   }
 
+  const cellSelection = uiState.selectedCell;
+  const placement = cellSelection
+    ? { x: Math.round(cellSelection.x), y: Math.round(cellSelection.y) }
+    : null;
+  const cellLabel = placement
+    ? `${placement.x}, ${placement.y}`
+    : 'Select a cell to place pieces';
+
+  const search = uiState.addPanelSearch;
+  const rawTab = uiState.addPanelTab;
+  const tab = WD_TAB_KEYS.has(rawTab) ? rawTab : 'convicts';
+
+  const tabsHtml = WD_TABS.map(t =>
+    `<button class="ap-tab${t.key === tab && !search ? ' is-active' : ''}" data-set-tab="${t.key}">${t.label}</button>`
+  ).join('');
+
+  let body = '';
+  if (search) body = wdSearchBody(search, runtime, placement);
+  else if (tab === 'convicts') body = wdConvictsTabBody(runtime, placement);
+  else if (tab === 'enemies') body = wdEnemiesTabBody(runtime, placement);
+  else if (tab === 'objects') body = wdObjectsTabBody(runtime);
+  else if (tab === 'maptiles') body = wdMapTilesTabBody();
+
   return `
     <div class="sp-add-header">
       <button class="sp-panel-back" data-action="close-add">&#8592;</button>
-      <span class="sp-add-title">WD Pieces</span>
+      <span class="sp-add-title">Add</span>
     </div>
     <div class="sp-obj-header sp-obj-header--stack">
       <div class="sp-type">Wardens Debt</div>
       <div class="sp-name">${escHtml(cellLabel)}</div>
-      <div class="sp-meta-line">${placement ? escHtml(`${placement.x}, ${placement.y}`) : 'Click a cell on the map to place pieces there.'}</div>
     </div>
-    <div class="sp-subhead">Placeholders</div>
-    <div class="sp-wd-condition-picker">
-      <button class="sp-wd-condition-pick" data-action="wd-add-maptile">
-        Add Maptile
-      </button>
-      <button class="sp-wd-condition-pick" data-action="wd-add-figure" data-figure-kind="convict" ${placement ? '' : 'disabled'}>
-        Add Convict
-      </button>
-      <button class="sp-wd-condition-pick" data-action="wd-add-figure" data-figure-kind="enemy" ${placement ? '' : 'disabled'}>
-        Add Enemy
-      </button>
+    <div class="ap-sticky">
+      <input id="add-search" class="ap-search" type="text"
+             placeholder="Search…" value="${escHtml(search)}" autocomplete="off">
+      <div class="ap-tabs" style="grid-template-columns:repeat(4,1fr)">${tabsHtml}</div>
     </div>
-    <div class="sp-meta-line">These are test pieces only. They are added to the selected cell.</div>
+    ${body}
   `;
 }
 

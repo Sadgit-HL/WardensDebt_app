@@ -87,6 +87,15 @@ export function selectWardensDebtCell(x, y) {
   notify();
 }
 
+export function selectWardensDebtEmptyCell(x, y) {
+  uiState.selectedHex = null;
+  uiState.selectedCell = { x, y };
+  uiState.selectedWdMapTile = null;
+  uiState.selected = null;
+  uiState.stack = [];
+  notify();
+}
+
 export function selectWardensDebtMapTile(id) {
   uiState.selectedHex = null;
   uiState.selectedCell = null;

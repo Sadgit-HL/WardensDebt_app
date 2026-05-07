@@ -274,8 +274,9 @@ export function compressedStateUrl() {
 }
 
 function setUrlHash(hash) {
-  const url = hash && hash !== '#' ? hash : (location.pathname + location.search);
-  history.replaceState(null, '', url);
+  const url = new URL(location.href);
+  url.hash = (hash && hash !== '#') ? hash : '';
+  history.replaceState(null, '', url.toString());
 }
 
 function pushUndo(hash) {

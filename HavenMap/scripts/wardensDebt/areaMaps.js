@@ -1,11 +1,11 @@
 export const WARDENS_DEBT_AREA_MAPS = {
-  'tile-cell-a': {
-    image: 'images/maptiles/0126.jpg',
+  'tile-41b': {
+    image: 'images/maptiles/41b.webp',
     naturalWidth: 859,
     naturalHeight: 2534,
     x: 240,
     y: 80,
-    width: 420,
+    width: 430,
     areas: [
       {
         id: 'upper-room',
