@@ -40,13 +40,13 @@ Content is now organized by explicit game element families rather than one gener
 
 ```js
 {
-  schemaVersion: '0.4.0',
+  schemaVersion: '0.5.0',
   gameId: 'wardens-debt',
   contentVersion: 'prototype-core-set',
   dice: [],
   conditionTokens: [],
   skillCards: [],
-  convictCards: [],
+  convictDefs: [],
   monsterCards: [],
   eventCards: [],
   itemCards: [],
@@ -58,6 +58,46 @@ Content is now organized by explicit game element families rather than one gener
   scenarios: []
 }
 ```
+
+### Production Tags
+
+Because the app is intended to support physical playtesting, content may also use **production tags** inside `tags`.
+
+For now, this stays lightweight and tag-based.
+
+Recommended production tag style:
+
+- `print`
+- `component:card`
+- `component:token`
+- `component:board`
+- `print-group:starter-skill-cards`
+- `print-group:condition-tokens`
+- `print-group:map-tiles`
+
+Use these tags for questions like:
+
+- does this need to be printed?
+- what kind of physical component is it?
+- which print/export batch should it belong to?
+
+For now:
+
+- production info lives in `tags`
+- decks and scenarios are usually logical setup objects, not printed components themselves
+- if production requirements become more detailed later, they can move into a dedicated metadata object
+
+<!--
+Future option if tag-based production data becomes too limited:
+
+production: {
+  print: true,
+  componentType: 'card',
+  printGroup: 'starter-skill-cards',
+  copies: 2,
+  layoutTemplate: 'skill-card-standard'
+}
+-->
 
 ### Dice
 
@@ -80,7 +120,7 @@ Condition tokens are reusable status definitions.
   id: 'marked',
   name: 'Marked',
   description: 'The next precise hit gains bonus damage.',
-  tags: ['debuff']
+  tags: ['debuff', 'print', 'component:token', 'print-group:condition-tokens']
 }
 ```
 
@@ -97,19 +137,19 @@ Skill cards are split into two roles:
   name: 'Placeholder Starter Strike',
   role: 'starter',
   timing: 'fast',
-  convictId: 'convict-a',
+  convictDefId: 'convict-a',
   cost: 0,
   text: 'Deal 1 damage to an enemy.',
-  tags: ['starter', 'attack'],
+  tags: ['starter', 'attack', 'print', 'component:card', 'print-group:starter-skill-cards'],
   effects: [
     { type: 'deal_damage', target: 'enemy', amount: 1 }
   ]
 }
 ```
 
-### Convict Cards
+### Convict Definitions
 
-Convict cards define the playable heroes and their starting skill package.
+Convict definitions (`convictDefs`) define the playable heroes and their starting skill package.
 
 ```js
 {
@@ -121,7 +161,7 @@ Convict cards define the playable heroes and their starting skill package.
     'convict-a-starter-strike',
     'convict-a-starter-guard'
   ],
-  tags: ['convict', 'frontline']
+  tags: ['convict', 'frontline', 'print', 'component:card', 'print-group:convict-cards']
 }
 ```
 
@@ -136,7 +176,7 @@ These remain separate content families because they evolve differently even if s
   health: 6,
   attack: 2,
   text: 'A basic enemy template for testing.',
-  tags: ['monster', 'basic'],
+  tags: ['monster', 'basic', 'print', 'component:card', 'print-group:monster-cards'],
   effects: [
     { type: 'deal_damage', target: 'convict', amount: 2 }
   ]
@@ -155,7 +195,7 @@ Location cards define room-level setup and reference the tiles they use.
   name: 'Placeholder Cell Block',
   mapTileIds: ['tile-cell-a', 'tile-hall-a'],
   monsterCardIds: ['monster-collector'],
-  tags: ['location', 'intro-room']
+  tags: ['location', 'intro-room', 'print', 'component:card', 'print-group:location-cards']
 }
 ```
 
@@ -166,7 +206,7 @@ Map tiles are reusable board pieces:
   id: 'tile-cell-a',
   name: 'Placeholder Cell Tile',
   layoutKey: 'cell-a',
-  tags: ['tile', 'room']
+  tags: ['tile', 'room', 'print', 'component:board', 'print-group:map-tiles']
 }
 ```
 
@@ -203,7 +243,7 @@ Scenarios assemble the active content for a play session.
   name: 'Placeholder Scenario One',
   playerSlots: 2,
   setup: {
-    convictIds: ['convict-a', 'convict-b'],
+    convictDefIds: ['convict-a', 'convict-b'],
     commonSkillDeckIds: ['common-skill-deck-a', 'common-skill-deck-b'],
     monsterDeckId: 'monster-deck-a',
     eventDeckId: 'event-deck-a',
@@ -230,12 +270,12 @@ Runtime state is derived from authored content plus a chosen scenario.
   scenarioId: 'breach-the-ledger-vault',
   turn: {
     round: 1,
-    activeSide: 'players',
+    activeSide: 'convicts',
     phase: 'start-round'
   },
   dicePool: [],
   conditionSupply: [],
-  players: [],
+  convicts: [],
   enemies: [],
   decks: {},
   activeCards: {},
@@ -245,15 +285,15 @@ Runtime state is derived from authored content plus a chosen scenario.
 }
 ```
 
-### Players
+### Convicts
 
-Players are runtime instances of selected convict cards.
+Convicts are runtime instances of selected convict definitions.
 
 ```js
 {
-  id: 'player-1',
+  id: 'convict-1',
   name: 'Placeholder Convict A',
-  convictId: 'convict-a',
+  convictDefId: 'convict-a',
   health: 10,
   maxHealth: 10,
   handSize: 8,
@@ -270,7 +310,7 @@ Players are runtime instances of selected convict cards.
 
 ### Shared Decks
 
-Shared decks exist independently from player starter cards.
+Shared decks exist independently from convict starter cards.
 
 ```js
 {
@@ -313,16 +353,17 @@ Board state tracks the active location and the tiles it references.
 - condition tokens and dice are first-class content, not ad hoc flags
 - location cards and map tiles are separate so room setup can evolve without baking geometry into scenarios
 - shared deck families remain explicit instead of being hidden behind one overloaded card schema
+- production/export signals can be tracked immediately with simple tags
 
 ## Current Runtime Rules
 
 The current prototype implements these rules:
 
-- Player hand size is capped at `8`.
-- Redraw attempts to refill a player hand to that configured size.
+- Convict hand size is capped at `8`.
+- Redraw attempts to refill a convict hand to that configured size.
 - If the personal draw pile is empty, the discard pile is recycled into the draw pile.
-- Common skill cards are taken from shared common-skill decks and go directly into the player hand.
-- Once used or discarded, those common skill cards enter the owning player's discard pile and can be redrawn later.
+- Common skill cards are taken from shared common-skill decks and go directly into the convict hand.
+- Once used or discarded, those common skill cards enter the owning convict's discard pile and can be redrawn later.
 - Skill cards can only be selected during `select-cards`.
 - Selected skills are queued into `activeCards.fastSkills` or `activeCards.slowSkills`.
 - `fast` skills resolve during `fast-cards`.

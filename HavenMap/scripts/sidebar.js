@@ -17,7 +17,7 @@ import {
   getWardensDebtRuntime,
   subscribeWardensDebtRuntime,
   updateWardensDebtEnemy,
-  updateWardensDebtPlayer,
+  updateWardensDebtConvict,
 } from './wardensDebt/runtime.js';
 
 // ─── Kind → state key + data table ───────────────────────────────────────────
@@ -34,7 +34,7 @@ function arrForKind(kind)        { return state[KIND_MAP[kind]?.stateKey] || [];
 function patchKind(kind, newArr) { patch({ [KIND_MAP[kind].stateKey]: newArr }); }
 
 const WARDENS_DEBT_KIND_MAP = {
-  'wd-player': { stateKey: 'players', label: 'Convict' },
+  'wd-convict': { stateKey: 'convicts', label: 'Convict' },
   'wd-enemy':  { stateKey: 'enemies', label: 'Monster' },
 };
 
@@ -58,9 +58,9 @@ function wardensDebtConditionLabel(runtime, conditionId) {
 
 function updateWardensDebtSelectedStat(kind, idx, field, newVal) {
   const value = Math.max(0, Number(newVal) || 0);
-  if (kind === 'wd-player') {
-    return updateWardensDebtPlayer(idx, player => ({
-      ...player,
+  if (kind === 'wd-convict') {
+    return updateWardensDebtConvict(idx, convict => ({
+      ...convict,
       [field === 'hp' ? 'health' : 'maxHealth']: value,
     }));
   }
@@ -74,10 +74,10 @@ function updateWardensDebtSelectedStat(kind, idx, field, newVal) {
 }
 
 function updateWardensDebtSelectedConditions(kind, idx, updater) {
-  if (kind === 'wd-player') {
-    return updateWardensDebtPlayer(idx, player => ({
-      ...player,
-      conditions: updater(Array.isArray(player.conditions) ? player.conditions : []),
+  if (kind === 'wd-convict') {
+    return updateWardensDebtConvict(idx, convict => ({
+      ...convict,
+      conditions: updater(Array.isArray(convict.conditions) ? convict.conditions : []),
     }));
   }
   if (kind === 'wd-enemy') {
@@ -627,7 +627,7 @@ function adjustSelectedHp(delta) {
   const ctx = selectedObject();
   if (!ctx) return false;
   if (isWardensDebtKind(ctx.sel.kind)) {
-    const currentHp = ctx.sel.kind === 'wd-player'
+    const currentHp = ctx.sel.kind === 'wd-convict'
       ? Number(ctx.obj.health) || 0
       : Number(ctx.obj.currentHealth) || 0;
     updateWardensDebtSelectedStat(ctx.sel.kind, ctx.sel.idx, 'hp', currentHp + delta);
@@ -742,7 +742,7 @@ function handleAction(dataset) {
       const field = statMatch[1];
       const delta = statMatch[2] === 'inc' ? 1 : -1;
       const currentValue = field === 'hp'
-        ? (sel.kind === 'wd-player' ? Number(ctx.obj.health) || 0 : Number(ctx.obj.currentHealth) || 0)
+        ? (sel.kind === 'wd-convict' ? Number(ctx.obj.health) || 0 : Number(ctx.obj.currentHealth) || 0)
         : Number(ctx.obj.maxHealth) || 0;
       updateWardensDebtSelectedStat(sel.kind, sel.idx, field, currentValue + delta);
       return;
@@ -1283,13 +1283,13 @@ function wardensDebtRosterPanel(runtime) {
     return hint('Wardens Debt runtime unavailable');
   }
 
-  const players = runtime.gameState.players.map((player, idx) => `
-    <button class="sp-stack-select sp-wd-roster-btn" data-action="wd-select" data-kind="wd-player" data-idx="${idx}">
+  const convicts = runtime.gameState.convicts.map((convict, idx) => `
+    <button class="sp-stack-select sp-wd-roster-btn" data-action="wd-select" data-kind="wd-convict" data-idx="${idx}">
       <span class="sp-stack-info">
         <span class="sp-stack-type">Convict</span>
-        <span class="sp-stack-name">${escHtml(player.name)}</span>
+        <span class="sp-stack-name">${escHtml(convict.name)}</span>
       </span>
-      <span class="sp-stack-chevron">${Number(player.health) || 0}/${Number(player.maxHealth) || 0}</span>
+      <span class="sp-stack-chevron">${Number(convict.health) || 0}/${Number(convict.maxHealth) || 0}</span>
     </button>
   `).join('');
 
@@ -1309,7 +1309,7 @@ function wardensDebtRosterPanel(runtime) {
       <div class="sp-name">${escHtml(runtime.scenarioName || 'Prototype Scenario')}</div>
     </div>
     <div class="sp-subhead">Convicts</div>
-    <div class="sp-stack-list">${players || '<div class="sp-meta-line">No convicts in the current scenario.</div>'}</div>
+    <div class="sp-stack-list">${convicts || '<div class="sp-meta-line">No convicts in the current scenario.</div>'}</div>
     <div class="sp-subhead">Monsters</div>
     <div class="sp-stack-list">${enemies || '<div class="sp-meta-line">No monsters in the current scenario.</div>'}</div>
   `;
@@ -1320,7 +1320,7 @@ function wardensDebtObjectPanel(kind, idx) {
   if (!ctx) return hint('Wardens Debt actor unavailable');
 
   const { runtime, obj } = ctx;
-  const isPlayer = kind === 'wd-player';
+  const isConvict = kind === 'wd-convict';
   const conditions = Array.isArray(obj.conditions) ? obj.conditions : [];
   const available = [...(runtime.index?.conditionTokensById?.keys() || [])]
     .filter(conditionId => !conditions.includes(conditionId));
@@ -1354,8 +1354,8 @@ function wardensDebtObjectPanel(kind, idx) {
     </button>
   `).join('');
 
-  const hpValue = isPlayer ? Number(obj.health) || 0 : Number(obj.currentHealth) || 0;
-  const extraTiles = isPlayer
+  const hpValue = isConvict ? Number(obj.health) || 0 : Number(obj.currentHealth) || 0;
+  const extraTiles = isConvict
     ? [
         readOnlyCounter('Guard', Number(obj.guards) || 0, '#6b7da8'),
         readOnlyCounter('Resources', Number(obj.resources) || 0, '#9a7f5e'),
@@ -1368,18 +1368,18 @@ function wardensDebtObjectPanel(kind, idx) {
 
   return `
     <button class="sp-panel-back" data-action="wd-show-roster">&#8592; Roster</button>
-    <div class="sp-obj-header sp-obj-header--selected${isPlayer ? '' : ' sp-obj-header--monster'}">
+    <div class="sp-obj-header sp-obj-header--selected${isConvict ? '' : ' sp-obj-header--monster'}">
       <div class="sp-obj-info">
         <div class="sp-title-row">
-          <div class="sp-type">${isPlayer ? 'Convict' : 'Monster'}</div>
+          <div class="sp-type">${isConvict ? 'Convict' : 'Monster'}</div>
         </div>
-        <div class="sp-name">${escHtml(obj.name || (isPlayer ? `Convict ${idx + 1}` : `Monster ${idx + 1}`))}</div>
-        <div class="sp-meta-line">${escHtml(isPlayer ? obj.convictId : obj.monsterCardId)}</div>
+        <div class="sp-name">${escHtml(obj.name || (isConvict ? `Convict ${idx + 1}` : `Monster ${idx + 1}`))}</div>
+        <div class="sp-meta-line">${escHtml(isConvict ? obj.convictDefId : obj.monsterCardId)}</div>
       </div>
     </div>
     <div class="sp-stats sp-stats--monster">
       <div class="sp-subhead">Combat</div>
-      <div class="sp-stat-grid${isPlayer ? ' sp-stat-grid--mercenary' : ' sp-stat-grid--monster'}">
+      <div class="sp-stat-grid${isConvict ? ' sp-stat-grid--mercenary' : ' sp-stat-grid--monster'}">
         ${counter('HP', 'hp', hpValue, '#c0392b')}
         ${counter('Max HP', 'maxhp', Number(obj.maxHealth) || 0, '#2e7d32')}
         ${extraTiles}

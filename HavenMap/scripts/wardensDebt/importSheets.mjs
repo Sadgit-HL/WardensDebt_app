@@ -23,7 +23,7 @@ const TAB_NAMES = [
   'dice',
   'conditionTokens',
   'skillCards',
-  'convictCards',
+  'convictDefs',
   'monsterCards',
   'eventCards',
   'itemCards',
@@ -125,7 +125,7 @@ function mapSkillCardRow(row) {
     id: String(row.id).trim(),
     name: String(row.name).trim(),
     role: String(row.role).trim(),
-    convictId: asNonEmptyString(row.convictId),
+    convictDefId: asNonEmptyString(row.convictDefId ?? row.convictId),
     cost: parseInteger(row.cost, 0),
     text: String(row.text).trim(),
     tags: parseStringArray(row.tags),
@@ -133,7 +133,7 @@ function mapSkillCardRow(row) {
   };
 }
 
-function mapConvictCardRow(row) {
+function mapConvictDefRow(row) {
   return {
     id: String(row.id).trim(),
     name: String(row.name).trim(),
@@ -211,7 +211,7 @@ function mapScenarioRow(row) {
     name: String(row.name).trim(),
     playerSlots: parseInteger(row.playerSlots, 0),
     setup: {
-      convictIds: parseStringArray(row.convictIds),
+      convictDefIds: parseStringArray(row.convictDefIds ?? row.convictIds),
       commonSkillDeckIds: parseStringArray(row.commonSkillDeckIds),
       monsterDeckId: optionalDeckId(row.monsterDeckId),
       eventDeckId: optionalDeckId(row.eventDeckId),
@@ -243,7 +243,7 @@ function buildContent(workbook) {
     dice: requireArrayTab(workbook, 'dice').map(mapDiceRow),
     conditionTokens: requireArrayTab(workbook, 'conditionTokens').map(mapConditionTokenRow),
     skillCards: requireArrayTab(workbook, 'skillCards').map(mapSkillCardRow),
-    convictCards: requireArrayTab(workbook, 'convictCards').map(mapConvictCardRow),
+    convictDefs: requireArrayTab(workbook, 'convictDefs').map(mapConvictDefRow),
     monsterCards: requireArrayTab(workbook, 'monsterCards').map(mapMonsterCardRow),
     eventCards: requireArrayTab(workbook, 'eventCards').map(mapEffectCardRow),
     itemCards: requireArrayTab(workbook, 'itemCards').map(mapItemCardRow),

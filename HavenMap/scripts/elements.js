@@ -1,9 +1,9 @@
 import {
   advanceWardensDebtPhase,
   drawWardensDebtDeckCard,
-  drawWardensDebtPlayerCard,
+  drawWardensDebtConvictCard,
   playWardensDebtSkillCard,
-  redrawWardensDebtPlayerHand,
+  redrawWardensDebtConvictHand,
   resolveWardensDebtActiveCardToDiscard,
   retreatWardensDebtPhase,
   startNextWardensDebtRound,
@@ -18,7 +18,7 @@ import { state, patch } from './state.js';
 import { ELEMENTS } from './games/common.js';
 import { uiState, selectFromStack, subscribeUI } from './uiState.js';
 
-let activePlayerIndex = 0;
+let activeConvictIndex = 0;
 let statusMessage = '';
 
 export function cycleElement(index) {
@@ -40,21 +40,21 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;');
 }
 
-function syncActivePlayerWithSelection(runtime) {
+function syncActiveConvictWithSelection(runtime) {
   const selected = uiState.selected;
-  if (selected?.kind === 'wd-player' && Number.isInteger(selected.idx)) {
-    activePlayerIndex = selected.idx;
+  if (selected?.kind === 'wd-convict' && Number.isInteger(selected.idx)) {
+    activeConvictIndex = selected.idx;
     return;
   }
 
-  const playerCount = runtime.gameState?.players?.length || 0;
-  if (playerCount === 0) {
-    activePlayerIndex = 0;
+  const convictCount = runtime.gameState?.convicts?.length || 0;
+  if (convictCount === 0) {
+    activeConvictIndex = 0;
     return;
   }
 
-  if (activePlayerIndex < 0 || activePlayerIndex >= playerCount) {
-    activePlayerIndex = 0;
+  if (activeConvictIndex < 0 || activeConvictIndex >= convictCount) {
+    activeConvictIndex = 0;
   }
 }
 
@@ -65,9 +65,9 @@ function selectedTargetRef(runtime) {
   };
 }
 
-function activePlayer(runtime) {
-  syncActivePlayerWithSelection(runtime);
-  return runtime.gameState?.players?.[activePlayerIndex] || null;
+function activeConvict(runtime) {
+  syncActiveConvictWithSelection(runtime);
+  return runtime.gameState?.convicts?.[activeConvictIndex] || null;
 }
 
 function cardDetails(runtime, cardId) {
@@ -100,7 +100,7 @@ function queuedSkillSections(runtime) {
   return queueConfigs.map(config => {
     const queue = runtime.gameState.activeCards?.[config.key] || [];
     const cardsHtml = queue.map((queuedCard, queueIndex) => {
-      const player = runtime.gameState.players?.[queuedCard.playerIndex];
+      const convict = runtime.gameState.convicts?.[queuedCard.convictIndex];
       const card = cardDetails(runtime, queuedCard.cardId);
       return `
         <article class="wd-active-card">
@@ -111,7 +111,7 @@ function queuedSkillSections(runtime) {
             </div>
           </div>
           <div class="wd-active-card-title">${escapeHtml(card?.name || queuedCard.cardId)}</div>
-          <div class="wd-active-card-text">${escapeHtml(player?.name || `Player ${queueIndex + 1}`)} · ${escapeHtml(card?.timing || '')}</div>
+          <div class="wd-active-card-text">${escapeHtml(convict?.name || `Convict ${queueIndex + 1}`)} · ${escapeHtml(card?.timing || '')}</div>
         </article>
       `;
     }).join('');
@@ -156,8 +156,8 @@ function renderError(playbar, runtime) {
 }
 
 function renderReady(playbar, runtime) {
-  const player = activePlayer(runtime);
-  if (!player) {
+  const convict = activeConvict(runtime);
+  if (!convict) {
     playbar.innerHTML = `
       <div class="wd-playbar wd-playbar--status">
         <div class="wd-playbar-copy">
@@ -190,7 +190,7 @@ function renderReady(playbar, runtime) {
       `;
     }).join('');
 
-  const handCards = player.hand.map((cardId, handIndex) => {
+  const handCards = convict.hand.map((cardId, handIndex) => {
     const card = cardDetails(runtime, cardId);
     const canSelectCard = runtime.gameState.turn.phase === 'select-cards';
     return `
@@ -247,8 +247,8 @@ function renderReady(playbar, runtime) {
       </div>
       <div class="wd-playbar-top">
         <div class="wd-playbar-players">
-          ${(runtime.gameState.players || []).map((entry, idx) => `
-            <button class="wd-player-tab${idx === activePlayerIndex ? ' is-active' : ''}" data-wd-action="select-player" data-player-index="${idx}">
+          ${(runtime.gameState.convicts || []).map((entry, idx) => `
+            <button class="wd-player-tab${idx === activeConvictIndex ? ' is-active' : ''}" data-wd-action="select-convict" data-convict-index="${idx}">
               ${escapeHtml(entry.name)}
             </button>
           `).join('')}
@@ -257,12 +257,12 @@ function renderReady(playbar, runtime) {
       <div class="wd-playbar-actions">
         <div class="wd-playbar-copy">
           <div class="wd-playbar-eyebrow">Convict</div>
-          <div class="wd-playbar-title">${escapeHtml(player.name)}</div>
-          <div class="wd-playbar-meta">${drawCountLabel(player)}</div>
+          <div class="wd-playbar-title">${escapeHtml(convict.name)}</div>
+          <div class="wd-playbar-meta">${drawCountLabel(convict)}</div>
         </div>
         <div class="wd-playbar-buttons">
-          <button class="wd-playbar-btn" data-wd-action="draw-player" ${(player.drawPile.length || player.discardPile.length) ? '' : 'disabled'}>Draw Starter</button>
-          <button class="wd-playbar-btn" data-wd-action="redraw-hand" ${(player.hand.length || player.drawPile.length || player.discardPile.length) ? '' : 'disabled'}>Redraw Hand</button>
+          <button class="wd-playbar-btn" data-wd-action="draw-convict" ${(convict.drawPile.length || convict.discardPile.length) ? '' : 'disabled'}>Draw Starter</button>
+          <button class="wd-playbar-btn" data-wd-action="redraw-hand" ${(convict.hand.length || convict.drawPile.length || convict.discardPile.length) ? '' : 'disabled'}>Redraw Hand</button>
           ${commonDeckButtons}
           ${activeDeckButtons}
         </div>
@@ -308,12 +308,12 @@ function handleAction(actionButton) {
   if (runtime.status !== 'ready' || !runtime.gameState || !runtime.index) return;
 
   try {
-    syncActivePlayerWithSelection(runtime);
-    if (action === 'select-player') {
-      const playerIndex = Number(actionButton.dataset.playerIndex);
-      if (!Number.isInteger(playerIndex) || !runtime.gameState.players[playerIndex]) return;
-      activePlayerIndex = playerIndex;
-      selectFromStack('wd-player', playerIndex);
+    syncActiveConvictWithSelection(runtime);
+    if (action === 'select-convict') {
+      const convictIndex = Number(actionButton.dataset.convictIndex);
+      if (!Number.isInteger(convictIndex) || !runtime.gameState.convicts[convictIndex]) return;
+      activeConvictIndex = convictIndex;
+      selectFromStack('wd-convict', convictIndex);
       statusMessage = '';
       return;
     }
@@ -347,17 +347,17 @@ function handleAction(actionButton) {
       return;
     }
 
-    if (action === 'draw-player') {
-      const result = drawWardensDebtPlayerCard(runtime.gameState, runtime.index, activePlayerIndex, 1);
+    if (action === 'draw-convict') {
+      const result = drawWardensDebtConvictCard(runtime.gameState, runtime.index, activeConvictIndex, 1);
       setWardensDebtGameState(result.gameState);
-      setStatus(`Drew ${result.drawnCount} card for ${runtime.gameState.players[activePlayerIndex].name}.`);
+      setStatus(`Drew ${result.drawnCount} card for ${runtime.gameState.convicts[activeConvictIndex].name}.`);
       return;
     }
 
     if (action === 'redraw-hand') {
-      const result = redrawWardensDebtPlayerHand(runtime.gameState, runtime.index, activePlayerIndex);
+      const result = redrawWardensDebtConvictHand(runtime.gameState, runtime.index, activeConvictIndex);
       setWardensDebtGameState(result.gameState);
-      setStatus(`Redrew ${runtime.gameState.players[activePlayerIndex].name} to ${result.handCount} card(s).`);
+      setStatus(`Redrew ${runtime.gameState.convicts[activeConvictIndex].name} to ${result.handCount} card(s).`);
       return;
     }
 
@@ -366,10 +366,10 @@ function handleAction(actionButton) {
       const result = drawWardensDebtDeckCard(runtime.gameState, runtime.index, {
         group: 'commonSkillDecks',
         index: deckIndex,
-        playerIndex: activePlayerIndex,
+        convictIndex: activeConvictIndex,
       });
       setWardensDebtGameState(result.gameState);
-      setStatus(`Added ${result.drawnCardId} to ${runtime.gameState.players[activePlayerIndex].name} hand.`);
+      setStatus(`Added ${result.drawnCardId} to ${runtime.gameState.convicts[activeConvictIndex].name} hand.`);
       return;
     }
 
@@ -387,12 +387,12 @@ function handleAction(actionButton) {
       const result = playWardensDebtSkillCard(
         runtime.gameState,
         runtime.index,
-        activePlayerIndex,
+        activeConvictIndex,
         handIndex,
         selectedTargetRef(runtime)
       );
       setWardensDebtGameState(result.gameState);
-      setStatus(`${runtime.gameState.players[activePlayerIndex].name} selected ${result.cardId} for ${result.timing}.`);
+      setStatus(`${runtime.gameState.convicts[activeConvictIndex].name} selected ${result.cardId} for ${result.timing}.`);
       return;
     }
 

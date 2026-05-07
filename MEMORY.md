@@ -10,6 +10,7 @@
 - Implement incrementally.
 - Use the existing GUI/codebase as a practical starting point instead of rebuilding blindly.
 - Keep strong desktop usability while preserving mobile viability.
+- Responsive priority on smaller viewports: keep the `map` first and the `hand of cards` second; sidebar details and secondary controls should yield before those do.
 - Stop at sensible checkpoints when visual/runtime verification is useful.
 - Use the project as a way to learn efficient AI-assisted coding workflows, not just to ship features.
 - Prefer brief, practical explanations of general workflow and decision-making when they help transfer skill.
@@ -73,6 +74,10 @@
 
 ## Working Rules For Future Sessions
 - Treat `HavenMap` as legacy baseline code for migration, not as the desired final domain model.
+- Migration strategy: keep and reuse old HavenMap objects/modules when they still provide useful behavior with low confusion; remove them only when they clearly block Wardens Debt concepts or create repeated translation overhead.
+- Do not purge HavenMap infrastructure aggressively during the prototype phase.
+- Prefer isolating Wardens Debt concepts clearly over broad cleanup refactors.
+- Rename legacy concepts when that materially improves Wardens Debt clarity; batch-delete dead legacy pieces later once they are clearly unused.
 - Treat `WardensDebtDataModel.md` plus `HavenMap/scripts/wardensDebt/schema.js` as the current source of truth for the new domain model until a later migration step intentionally revises it.
 - Do not assume every rule needs full automation. If a rule is still changing often, prefer manual or lightly assisted handling unless repeated bookkeeping pain clearly justifies automation.
 - Before implementing Wardens Debt features, identify whether a module is reusable, adaptable, or better replaced.
@@ -98,8 +103,8 @@
   - fast skills resolve in `fast-cards`
   - slow skills resolve in `slow-cards`
   - queued skills discard at `end-round`
-  - shared common skill cards enter a player's hand immediately when taken from a common deck
-  - after use, those common cards discard to that player's discard pile and enter the redraw loop from there
-  - player hand size is currently capped at `8`
+  - shared common skill cards enter a convict's hand immediately when taken from a common deck
+  - after use, those common cards discard to that convict's discard pile and enter the redraw loop from there
+  - convict hand size is currently capped at `8`
 - Current implemented phase automation:
   - entering `event-phase` automatically draws one event card per convict into the active area

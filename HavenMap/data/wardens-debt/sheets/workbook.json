@@ -1,6 +1,6 @@
 {
   "meta": {
-    "schemaVersion": "0.4.0",
+    "schemaVersion": "0.5.0",
     "gameId": "wardens-debt",
     "contentVersion": "prototype-core-set"
   },
@@ -30,7 +30,7 @@
       "id": "convict-a-starter-strike",
       "name": "Placeholder Starter Strike",
       "role": "starter",
-      "convictId": "convict-a",
+      "convictDefId": "convict-a",
       "cost": "0",
       "text": "Deal 1 damage to an enemy.",
       "tags": "starter,attack",
@@ -40,7 +40,7 @@
       "id": "convict-a-starter-guard",
       "name": "Placeholder Starter Guard",
       "role": "starter",
-      "convictId": "convict-a",
+      "convictDefId": "convict-a",
       "cost": "0",
       "text": "Gain 1 guard.",
       "tags": "starter,defense",
@@ -50,7 +50,7 @@
       "id": "convict-b-starter-shot",
       "name": "Placeholder Starter Shot",
       "role": "starter",
-      "convictId": "convict-b",
+      "convictDefId": "convict-b",
       "cost": "0",
       "text": "Deal 1 damage and apply Marked.",
       "tags": "starter,ranged",
@@ -60,7 +60,7 @@
       "id": "convict-b-starter-focus",
       "name": "Placeholder Starter Focus",
       "role": "starter",
-      "convictId": "convict-b",
+      "convictDefId": "convict-b",
       "cost": "0",
       "text": "Draw 1 card.",
       "tags": "starter,utility",
@@ -103,7 +103,7 @@
       "effects": "[{\"type\":\"apply_condition\",\"target\":\"enemy\",\"conditionId\":\"marked\"}]"
     }
   ],
-  "convictCards": [
+  "convictDefs": [
     {
       "id": "convict-a",
       "name": "Placeholder Convict A",
@@ -261,7 +261,7 @@
       "id": "breach-the-ledger-vault",
       "name": "Placeholder Scenario One",
       "playerSlots": "2",
-      "convictIds": "convict-a,convict-b",
+      "convictDefIds": "convict-a,convict-b",
       "commonSkillDeckIds": "common-skill-deck-a,common-skill-deck-b",
       "monsterDeckId": "monster-deck-a",
       "eventDeckId": "event-deck-a",

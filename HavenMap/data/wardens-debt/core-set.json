@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "0.4.0",
+  "schemaVersion": "0.5.0",
   "gameId": "wardens-debt",
   "contentVersion": "prototype-core-set",
   "dice": [
@@ -15,7 +15,10 @@
       "name": "Marked",
       "description": "The next precise hit gains bonus damage.",
       "tags": [
-        "debuff"
+        "debuff",
+        "print",
+        "component:token",
+        "print-group:condition-tokens"
       ]
     },
     {
@@ -23,7 +26,10 @@
       "name": "Guarded",
       "description": "Reduce incoming damage by one until spent.",
       "tags": [
-        "buff"
+        "buff",
+        "print",
+        "component:token",
+        "print-group:condition-tokens"
       ]
     }
   ],
@@ -33,12 +39,15 @@
       "name": "Placeholder Starter Strike",
       "role": "starter",
       "timing": "fast",
-      "convictId": "convict-a",
+      "convictDefId": "convict-a",
       "cost": 0,
       "text": "Deal 1 damage to an enemy.",
       "tags": [
         "starter",
-        "attack"
+        "attack",
+        "print",
+        "component:card",
+        "print-group:starter-skill-cards"
       ],
       "effects": [
         {
@@ -53,12 +62,15 @@
       "name": "Placeholder Starter Guard",
       "role": "starter",
       "timing": "slow",
-      "convictId": "convict-a",
+      "convictDefId": "convict-a",
       "cost": 0,
       "text": "Gain 1 guard.",
       "tags": [
         "starter",
-        "defense"
+        "defense",
+        "print",
+        "component:card",
+        "print-group:starter-skill-cards"
       ],
       "effects": [
         {
@@ -73,12 +85,15 @@
       "name": "Placeholder Starter Shot",
       "role": "starter",
       "timing": "fast",
-      "convictId": "convict-b",
+      "convictDefId": "convict-b",
       "cost": 0,
       "text": "Deal 1 damage and apply Marked.",
       "tags": [
         "starter",
-        "ranged"
+        "ranged",
+        "print",
+        "component:card",
+        "print-group:starter-skill-cards"
       ],
       "effects": [
         {
@@ -98,12 +113,15 @@
       "name": "Placeholder Starter Focus",
       "role": "starter",
       "timing": "slow",
-      "convictId": "convict-b",
+      "convictDefId": "convict-b",
       "cost": 0,
       "text": "Draw 1 card.",
       "tags": [
         "starter",
-        "utility"
+        "utility",
+        "print",
+        "component:card",
+        "print-group:starter-skill-cards"
       ],
       "effects": [
         {
@@ -122,7 +140,10 @@
       "text": "Deal 2 damage.",
       "tags": [
         "common",
-        "attack"
+        "attack",
+        "print",
+        "component:card",
+        "print-group:common-skill-cards"
       ],
       "effects": [
         {
@@ -141,7 +162,10 @@
       "text": "Gain 1 guard.",
       "tags": [
         "common",
-        "defense"
+        "defense",
+        "print",
+        "component:card",
+        "print-group:common-skill-cards"
       ],
       "effects": [
         {
@@ -160,7 +184,10 @@
       "text": "Deal 1 damage and roll a die.",
       "tags": [
         "common",
-        "precision"
+        "precision",
+        "print",
+        "component:card",
+        "print-group:common-skill-cards"
       ],
       "effects": [
         {
@@ -184,7 +211,10 @@
       "text": "Apply Marked.",
       "tags": [
         "common",
-        "setup"
+        "setup",
+        "print",
+        "component:card",
+        "print-group:common-skill-cards"
       ],
       "effects": [
         {
@@ -195,7 +225,7 @@
       ]
     }
   ],
-  "convictCards": [
+  "convictDefs": [
     {
       "id": "convict-a",
       "name": "Placeholder Convict A",
@@ -207,7 +237,10 @@
       ],
       "tags": [
         "convict",
-        "frontline"
+        "frontline",
+        "print",
+        "component:card",
+        "print-group:convict-cards"
       ]
     },
     {
@@ -221,7 +254,10 @@
       ],
       "tags": [
         "convict",
-        "ranged"
+        "ranged",
+        "print",
+        "component:card",
+        "print-group:convict-cards"
       ]
     }
   ],
@@ -234,7 +270,10 @@
       "text": "A basic enemy template for testing.",
       "tags": [
         "monster",
-        "basic"
+        "basic",
+        "print",
+        "component:card",
+        "print-group:monster-cards"
       ],
       "effects": [
         {
@@ -252,7 +291,10 @@
       "text": "Apply Marked to the lead convict.",
       "tags": [
         "event",
-        "pressure"
+        "pressure",
+        "print",
+        "component:card",
+        "print-group:event-cards"
       ],
       "effects": [
         {
@@ -268,7 +310,10 @@
       "text": "A second placeholder event card for multi-convict event draws.",
       "tags": [
         "event",
-        "pressure"
+        "pressure",
+        "print",
+        "component:card",
+        "print-group:event-cards"
       ],
       "effects": [
         {
@@ -286,7 +331,10 @@
       "text": "Heal 1.",
       "tags": [
         "item",
-        "healing"
+        "healing",
+        "print",
+        "component:card",
+        "print-group:item-cards"
       ],
       "effects": [
         {
@@ -304,7 +352,10 @@
       "text": "A placeholder agenda card for future progression rules.",
       "tags": [
         "agenda",
-        "placeholder"
+        "placeholder",
+        "print",
+        "component:card",
+        "print-group:agenda-cards"
       ],
       "effects": [
         {
@@ -320,7 +371,10 @@
       "text": "A second agenda card to prove deterministic stack order.",
       "tags": [
         "agenda",
-        "placeholder"
+        "placeholder",
+        "print",
+        "component:card",
+        "print-group:agenda-cards"
       ],
       "effects": [
         {
@@ -338,7 +392,10 @@
       "text": "A placeholder mission card for scenario-level goals.",
       "tags": [
         "mission",
-        "placeholder"
+        "placeholder",
+        "print",
+        "component:card",
+        "print-group:mission-cards"
       ],
       "effects": [
         {
@@ -354,7 +411,10 @@
       "text": "A second mission card to prove deterministic stack order.",
       "tags": [
         "mission",
-        "placeholder"
+        "placeholder",
+        "print",
+        "component:card",
+        "print-group:mission-cards"
       ],
       "effects": [
         {
@@ -378,7 +438,10 @@
       ],
       "tags": [
         "location",
-        "intro-room"
+        "intro-room",
+        "print",
+        "component:card",
+        "print-group:location-cards"
       ]
     }
   ],
@@ -389,7 +452,10 @@
       "layoutKey": "cell-a",
       "tags": [
         "tile",
-        "room"
+        "room",
+        "print",
+        "component:board",
+        "print-group:map-tiles"
       ]
     },
     {
@@ -398,7 +464,10 @@
       "layoutKey": "hall-a",
       "tags": [
         "tile",
-        "hallway"
+        "hallway",
+        "print",
+        "component:board",
+        "print-group:map-tiles"
       ]
     }
   ],
@@ -479,7 +548,7 @@
       "name": "Placeholder Scenario One",
       "playerSlots": 2,
       "setup": {
-        "convictIds": [
+        "convictDefIds": [
           "convict-a",
           "convict-b"
         ],

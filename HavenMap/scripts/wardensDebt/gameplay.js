@@ -26,7 +26,7 @@ function validateNextState(nextState, contentIndex, actionLabel) {
 }
 
 function activeSideForPhase(phase) {
-  return phase === 'enemy-phase' ? 'enemies' : 'players';
+  return phase === 'enemy-phase' ? 'enemies' : 'convicts';
 }
 
 function resolveDeckState(decksState, deckRef) {
@@ -47,12 +47,12 @@ function resolveDeckState(decksState, deckRef) {
     return {
       deckState,
       deckLabel: `common skill deck ${deckRef.index + 1}`,
-      cardDestination: 'player-hand',
+      cardDestination: 'convict-hand',
       activeGroup: null,
       deckRef: {
         group: 'commonSkillDecks',
         index: deckRef.index,
-        playerIndex: deckRef.playerIndex,
+        convictIndex: deckRef.convictIndex,
       },
     };
   }
@@ -78,21 +78,21 @@ function resolveDeckState(decksState, deckRef) {
   };
 }
 
-function resolvePlayer(nextState, playerIndex) {
-  if (!Number.isInteger(playerIndex) || playerIndex < 0) {
-    throw new Error('playerIndex must be a non-negative integer');
+function resolveConvict(nextState, convictIndex) {
+  if (!Number.isInteger(convictIndex) || convictIndex < 0) {
+    throw new Error('convictIndex must be a non-negative integer');
   }
 
-  const player = nextState.players[playerIndex];
-  if (!player) {
-    throw new Error(`No player exists at index ${playerIndex}`);
+  const convict = nextState.convicts[convictIndex];
+  if (!convict) {
+    throw new Error(`No convict exists at index ${convictIndex}`);
   }
 
-  if (!Array.isArray(player.hand)) {
-    throw new Error(`Player ${playerIndex + 1} has no hand array`);
+  if (!Array.isArray(convict.hand)) {
+    throw new Error(`Convict ${convictIndex + 1} has no hand array`);
   }
 
-  return player;
+  return convict;
 }
 
 function resolveEnemy(nextState, enemyIndex) {
@@ -108,16 +108,16 @@ function resolveEnemy(nextState, enemyIndex) {
   return enemy;
 }
 
-function resolveQueuedSkillPlayer(nextState, queuedCard) {
-  const player = nextState.players[queuedCard.playerIndex];
-  if (!player) {
-    throw new Error(`No player exists at index ${queuedCard.playerIndex} for queued skill`);
+function resolveQueuedSkillConvict(nextState, queuedCard) {
+  const convict = nextState.convicts[queuedCard.convictIndex];
+  if (!convict) {
+    throw new Error(`No convict exists at index ${queuedCard.convictIndex} for queued skill`);
   }
-  return player;
+  return convict;
 }
 
-function getPlayerHandLimit(player) {
-  const configured = Number.isInteger(player?.handSize) ? player.handSize : MAX_PLAYER_HAND_SIZE;
+function getConvictHandLimit(convict) {
+  const configured = Number.isInteger(convict?.handSize) ? convict.handSize : MAX_PLAYER_HAND_SIZE;
   return Math.max(0, Math.min(MAX_PLAYER_HAND_SIZE, configured));
 }
 
@@ -130,32 +130,32 @@ function shuffleCardIds(cardIds, randomIntInclusive) {
   return shuffled;
 }
 
-function recyclePlayerDiscardPile(player, logEntries, randomIntInclusive) {
-  if (!Array.isArray(player.discardPile) || player.discardPile.length === 0) return false;
-  player.drawPile = shuffleCardIds(player.discardPile, randomIntInclusive);
-  player.discardPile = [];
-  logEntries.push(`Recycled ${player.name} discard pile into draw pile`);
+function recycleConvictDiscardPile(convict, logEntries, randomIntInclusive) {
+  if (!Array.isArray(convict.discardPile) || convict.discardPile.length === 0) return false;
+  convict.drawPile = shuffleCardIds(convict.discardPile, randomIntInclusive);
+  convict.discardPile = [];
+  logEntries.push(`Recycled ${convict.name} discard pile into draw pile`);
   return true;
 }
 
-function drawCardsToPlayerHand(player, count, logEntries, randomIntInclusive = defaultRandomIntInclusive) {
+function drawCardsToConvictHand(convict, count, logEntries, randomIntInclusive = defaultRandomIntInclusive) {
   const drawCount = Math.max(0, count);
   for (let i = 0; i < drawCount; i += 1) {
-    if (player.hand.length >= getPlayerHandLimit(player)) {
+    if (convict.hand.length >= getConvictHandLimit(convict)) {
       break;
     }
-    if (player.drawPile.length === 0) {
-      const recycled = recyclePlayerDiscardPile(player, logEntries, randomIntInclusive);
+    if (convict.drawPile.length === 0) {
+      const recycled = recycleConvictDiscardPile(convict, logEntries, randomIntInclusive);
       if (!recycled) break;
     }
-    const nextCardId = player.drawPile.shift();
+    const nextCardId = convict.drawPile.shift();
     if (!nextCardId) break;
-    player.hand.push(nextCardId);
-    logEntries.push(`Drew ${nextCardId} into ${player.name} hand`);
+    convict.hand.push(nextCardId);
+    logEntries.push(`Drew ${nextCardId} into ${convict.name} hand`);
   }
 }
 
-function applySkillEffect(nextState, player, effect, logEntries, targetRef, randomIntInclusive) {
+function applySkillEffect(nextState, convict, effect, logEntries, targetRef, randomIntInclusive) {
   switch (effect.type) {
     case 'deal_damage': {
       if (effect.target !== 'enemy') {
@@ -163,22 +163,22 @@ function applySkillEffect(nextState, player, effect, logEntries, targetRef, rand
       }
       const enemy = resolveEnemy(nextState, targetRef?.enemyIndex ?? 0);
       enemy.currentHealth = Math.max(0, enemy.currentHealth - (effect.amount ?? 0));
-      logEntries.push(`${player.name} dealt ${effect.amount ?? 0} damage to ${enemy.name}`);
+      logEntries.push(`${convict.name} dealt ${effect.amount ?? 0} damage to ${enemy.name}`);
       return;
     }
     case 'gain_guard': {
       if (effect.target !== 'self') {
         throw new Error(`Unsupported gain_guard target "${effect.target}"`);
       }
-      player.guards += effect.amount ?? 0;
-      logEntries.push(`${player.name} gained ${effect.amount ?? 0} guard`);
+      convict.guards += effect.amount ?? 0;
+      logEntries.push(`${convict.name} gained ${effect.amount ?? 0} guard`);
       return;
     }
     case 'draw_cards': {
       if (effect.target !== 'self') {
         throw new Error(`Unsupported draw_cards target "${effect.target}"`);
       }
-      drawCardsToPlayerHand(player, effect.count ?? 0, logEntries, randomIntInclusive);
+      drawCardsToConvictHand(convict, effect.count ?? 0, logEntries, randomIntInclusive);
       return;
     }
     case 'apply_condition': {
@@ -190,7 +190,7 @@ function applySkillEffect(nextState, player, effect, logEntries, targetRef, rand
       }
       const enemy = resolveEnemy(nextState, targetRef?.enemyIndex ?? 0);
       enemy.conditions.push(effect.conditionId);
-      logEntries.push(`${player.name} applied ${effect.conditionId} to ${enemy.name}`);
+      logEntries.push(`${convict.name} applied ${effect.conditionId} to ${enemy.name}`);
       return;
     }
     case 'roll_die': {
@@ -207,7 +207,7 @@ function applySkillEffect(nextState, player, effect, logEntries, targetRef, rand
         throw new Error(`Random roll must return an integer between 1 and ${dieState.sides}, got "${rolledValue}"`);
       }
       dieState.currentValue = rolledValue;
-      logEntries.push(`${player.name} rolled ${rolledValue} on ${dieState.dieId}`);
+      logEntries.push(`${convict.name} rolled ${rolledValue} on ${dieState.dieId}`);
       return;
     }
     default:
@@ -258,7 +258,7 @@ function maybeTriggerEventPhaseDraw(nextState, contentIndex, logEntries) {
     return [];
   }
 
-  const drawCount = Math.max(0, nextState.players?.length || 0);
+  const drawCount = Math.max(0, nextState.convicts?.length || 0);
   const drawResults = [];
 
   for (let index = 0; index < drawCount; index += 1) {
@@ -285,15 +285,15 @@ function resolveWardensDebtQueuedSkillCards(nextState, contentIndex, queueName, 
   const resolvedCards = [];
   queue.forEach(queuedCard => {
     if (queuedCard.resolved) return;
-    const player = resolveQueuedSkillPlayer(nextState, queuedCard);
+    const convict = resolveQueuedSkillConvict(nextState, queuedCard);
     const card = contentIndex?.skillCardsById.get(queuedCard.cardId);
     if (!card) {
       throw new Error(`Unknown skill card "${queuedCard.cardId}"`);
     }
 
-    const logEntries = [`${player.name} resolved ${queuedCard.cardId}`];
+    const logEntries = [`${convict.name} resolved ${queuedCard.cardId}`];
     for (const effect of card.effects) {
-      applySkillEffect(nextState, player, effect, logEntries, { enemyIndex: 0, dieIndex: 0 }, randomIntInclusive);
+      applySkillEffect(nextState, convict, effect, logEntries, { enemyIndex: 0, dieIndex: 0 }, randomIntInclusive);
     }
     nextState.log = [
       ...nextState.log,
@@ -301,7 +301,7 @@ function resolveWardensDebtQueuedSkillCards(nextState, contentIndex, queueName, 
     ];
     queuedCard.resolved = true;
     resolvedCards.push({
-      playerIndex: queuedCard.playerIndex,
+      convictIndex: queuedCard.convictIndex,
       cardId: queuedCard.cardId,
     });
   });
@@ -315,15 +315,15 @@ function discardWardensDebtQueuedSkillCards(nextState) {
     const queue = nextState.activeCards?.[queueName];
     if (!Array.isArray(queue) || queue.length === 0) return;
     queue.forEach(queuedCard => {
-      const player = resolveQueuedSkillPlayer(nextState, queuedCard);
-      player.discardPile.push(queuedCard.cardId);
+      const convict = resolveQueuedSkillConvict(nextState, queuedCard);
+      convict.discardPile.push(queuedCard.cardId);
       discardedCards.push({
-        playerIndex: queuedCard.playerIndex,
+        convictIndex: queuedCard.convictIndex,
         cardId: queuedCard.cardId,
       });
       nextState.log = [
         ...nextState.log,
-        `${queuedCard.cardId} moved to ${player.name} discard pile at end of round`,
+        `${queuedCard.cardId} moved to ${convict.name} discard pile at end of round`,
       ];
     });
     nextState.activeCards[queueName] = [];
@@ -546,13 +546,13 @@ export function drawWardensDebtDeckCard(gameState, contentIndex, deckRef) {
   const drawnCardId = deckState.drawPile.shift();
   let destination;
 
-  if (cardDestination === 'player-hand') {
-    const player = resolvePlayer(nextState, deckRef.playerIndex);
-    if (player.hand.length >= getPlayerHandLimit(player)) {
-      throw new Error(`${player.name} already has the maximum hand size of ${getPlayerHandLimit(player)}`);
+  if (cardDestination === 'convict-hand') {
+    const convict = resolveConvict(nextState, deckRef.convictIndex);
+    if (convict.hand.length >= getConvictHandLimit(convict)) {
+      throw new Error(`${convict.name} already has the maximum hand size of ${getConvictHandLimit(convict)}`);
     }
-    player.hand.push(drawnCardId);
-    destination = `${player.name} hand`;
+    convict.hand.push(drawnCardId);
+    destination = `${convict.name} hand`;
   } else {
     if (!Array.isArray(nextState.activeCards?.[activeGroup])) {
       throw new Error(`Active card area "${activeGroup}" is missing`);
@@ -610,20 +610,20 @@ export function resolveWardensDebtActiveCardToDiscard(gameState, contentIndex, a
   };
 }
 
-export function drawWardensDebtPlayerCard(gameState, contentIndex, playerIndex, count = 1) {
+export function drawWardensDebtConvictCard(gameState, contentIndex, convictIndex, count = 1) {
   if (!Number.isInteger(count) || count < 1) {
     throw new Error('count must be a positive integer');
   }
 
   const nextState = cloneWardensDebtGameState(gameState);
-  const player = resolvePlayer(nextState, playerIndex);
+  const convict = resolveConvict(nextState, convictIndex);
   const logEntries = [];
-  const startingHandCount = player.hand.length;
+  const startingHandCount = convict.hand.length;
 
-  drawCardsToPlayerHand(player, count, logEntries, defaultRandomIntInclusive);
+  drawCardsToConvictHand(convict, count, logEntries, defaultRandomIntInclusive);
 
-  if (player.hand.length === startingHandCount) {
-    throw new Error(`${player.name} has no cards left to draw`);
+  if (convict.hand.length === startingHandCount) {
+    throw new Error(`${convict.name} has no cards left to draw`);
   }
 
   nextState.log = [
@@ -635,18 +635,18 @@ export function drawWardensDebtPlayerCard(gameState, contentIndex, playerIndex, 
 
   return {
     gameState: nextState,
-    playerIndex,
-    playerId: player.id,
-    drawnCount: player.hand.length - startingHandCount,
-    hand: [...player.hand],
-    remainingDrawPileCount: player.drawPile.length,
+    convictIndex,
+    convictRuntimeId: convict.id,
+    drawnCount: convict.hand.length - startingHandCount,
+    hand: [...convict.hand],
+    remainingDrawPileCount: convict.drawPile.length,
   };
 }
 
-export function redrawWardensDebtPlayerHand(
+export function redrawWardensDebtConvictHand(
   gameState,
   contentIndex,
-  playerIndex,
+  convictIndex,
   targetHandSize = null,
   randomIntInclusive = defaultRandomIntInclusive
 ) {
@@ -658,18 +658,18 @@ export function redrawWardensDebtPlayerHand(
   }
 
   const nextState = cloneWardensDebtGameState(gameState);
-  const player = resolvePlayer(nextState, playerIndex);
+  const convict = resolveConvict(nextState, convictIndex);
   const logEntries = [];
-  const discardedCards = [...player.hand];
+  const discardedCards = [...convict.hand];
 
   if (discardedCards.length > 0) {
-    player.discardPile.push(...discardedCards);
-    player.hand = [];
-    logEntries.push(`Discarded ${discardedCards.length} card(s) from ${player.name} hand`);
+    convict.discardPile.push(...discardedCards);
+    convict.hand = [];
+    logEntries.push(`Discarded ${discardedCards.length} card(s) from ${convict.name} hand`);
   }
 
-  const drawCount = targetHandSize ?? player.handSize ?? 0;
-  drawCardsToPlayerHand(player, drawCount, logEntries, randomIntInclusive);
+  const drawCount = targetHandSize ?? convict.handSize ?? 0;
+  drawCardsToConvictHand(convict, drawCount, logEntries, randomIntInclusive);
 
   nextState.log = [
     ...nextState.log,
@@ -680,19 +680,19 @@ export function redrawWardensDebtPlayerHand(
 
   return {
     gameState: nextState,
-    playerIndex,
-    playerId: player.id,
+    convictIndex,
+    convictRuntimeId: convict.id,
     discardedCount: discardedCards.length,
-    handCount: player.hand.length,
-    remainingDrawPileCount: player.drawPile.length,
-    remainingDiscardPileCount: player.discardPile.length,
+    handCount: convict.hand.length,
+    remainingDrawPileCount: convict.drawPile.length,
+    remainingDiscardPileCount: convict.discardPile.length,
   };
 }
 
 export function playWardensDebtSkillCard(
   gameState,
   contentIndex,
-  playerIndex,
+  convictIndex,
   handIndex,
   targetRef = {},
   randomIntInclusive = defaultRandomIntInclusive
@@ -709,11 +709,11 @@ export function playWardensDebtSkillCard(
   }
 
   const nextState = cloneWardensDebtGameState(gameState);
-  const player = resolvePlayer(nextState, playerIndex);
-  const cardId = player.hand[handIndex];
+  const convict = resolveConvict(nextState, convictIndex);
+  const cardId = convict.hand[handIndex];
 
   if (!cardId) {
-    throw new Error(`No skill card exists in ${player.name} hand at index ${handIndex}`);
+    throw new Error(`No skill card exists in ${convict.name} hand at index ${handIndex}`);
   }
 
   const card = contentIndex?.skillCardsById.get(cardId);
@@ -721,17 +721,17 @@ export function playWardensDebtSkillCard(
     throw new Error(`Unknown skill card "${cardId}"`);
   }
 
-  player.hand.splice(handIndex, 1);
+  convict.hand.splice(handIndex, 1);
   const queueName = card.timing === 'fast' ? 'fastSkills' : 'slowSkills';
   if (!Array.isArray(nextState.activeCards?.[queueName])) {
     throw new Error(`Active skill queue "${queueName}" is missing`);
   }
   nextState.activeCards[queueName].push({
-    playerIndex,
+    convictIndex,
     cardId,
     resolved: false,
   });
-  const logEntries = [`${player.name} selected ${cardId} for ${card.timing} resolution`];
+  const logEntries = [`${convict.name} selected ${cardId} for ${card.timing} resolution`];
 
   nextState.log = [
     ...nextState.log,
@@ -742,11 +742,11 @@ export function playWardensDebtSkillCard(
 
   return {
     gameState: nextState,
-    playerIndex,
-    playerId: player.id,
+    convictIndex,
+    convictRuntimeId: convict.id,
     cardId,
     timing: card.timing,
-    handCount: player.hand.length,
+    handCount: convict.hand.length,
     queueSize: nextState.activeCards[queueName].length,
   };
 }

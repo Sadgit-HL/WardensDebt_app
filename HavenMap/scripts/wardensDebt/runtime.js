@@ -121,13 +121,13 @@ export function updateWardensDebtGameState(updater) {
   return validateAndCommitGameState(nextGameState);
 }
 
-export function updateWardensDebtPlayer(playerIndex, updater) {
+export function updateWardensDebtConvict(convictIndex, updater) {
   return updateWardensDebtGameState(gameState => {
-    const player = gameState.players[playerIndex];
-    if (!player) {
-      throw new Error(`Wardens Debt player index ${playerIndex} is out of range.`);
+    const convict = gameState.convicts[convictIndex];
+    if (!convict) {
+      throw new Error(`Wardens Debt convict index ${convictIndex} is out of range.`);
     }
-    gameState.players[playerIndex] = updater({ ...player }) ?? player;
+    gameState.convicts[convictIndex] = updater({ ...convict }) ?? convict;
     return gameState;
   });
 }

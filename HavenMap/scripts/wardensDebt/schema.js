@@ -1,4 +1,4 @@
-export const WARDENS_DEBT_CONTENT_SCHEMA_VERSION = '0.4.0';
+export const WARDENS_DEBT_CONTENT_SCHEMA_VERSION = '0.5.0';
 export const WARDENS_DEBT_STATE_VERSION = '0.2.0';
 
 const DECK_KINDS = new Set(['common-skill', 'monster', 'event', 'item', 'location', 'agenda', 'mission']);
@@ -11,7 +11,7 @@ const EFFECT_TYPES = new Set([
   'apply_condition',
   'roll_die',
 ]);
-const TURN_SIDES = new Set(['players', 'enemies']);
+const TURN_SIDES = new Set(['convicts', 'enemies']);
 const SKILL_TIMINGS = new Set(['fast', 'slow']);
 const TURN_PHASES = new Set([
   'start-round',
@@ -152,7 +152,7 @@ function validateConditionToken(token, path, issues) {
   validateTaggable(token, path, issues);
 }
 
-function validateSkillCard(card, convictIds, conditionIds, path, issues) {
+function validateSkillCard(card, convictDefIds, conditionIds, path, issues) {
   if (!validateCardLike(card, path, issues)) return;
 
   if (!isNonEmptyString(card.role)) {
@@ -170,13 +170,13 @@ function validateSkillCard(card, convictIds, conditionIds, path, issues) {
   }
 
   if (card.role === 'starter') {
-    if (!isNonEmptyString(card.convictId)) {
-      pushIssue(issues, `${path}.convictId`, 'must be a non-empty string for starter skill cards');
-    } else if (!convictIds.has(card.convictId)) {
-      pushIssue(issues, `${path}.convictId`, `references unknown convict "${card.convictId}"`);
+    if (!isNonEmptyString(card.convictDefId)) {
+      pushIssue(issues, `${path}.convictDefId`, 'must be a non-empty string for starter skill cards');
+    } else if (!convictDefIds.has(card.convictDefId)) {
+      pushIssue(issues, `${path}.convictDefId`, `references unknown convict definition "${card.convictDefId}"`);
     }
-  } else if (card.convictId != null && !isNonEmptyString(card.convictId)) {
-    pushIssue(issues, `${path}.convictId`, 'must be a non-empty string when provided');
+  } else if (card.convictDefId != null && !isNonEmptyString(card.convictDefId)) {
+    pushIssue(issues, `${path}.convictDefId`, 'must be a non-empty string when provided');
   }
 
   card.effects.forEach((effect, index) => {
@@ -186,7 +186,7 @@ function validateSkillCard(card, convictIds, conditionIds, path, issues) {
   });
 }
 
-function validateConvictCard(card, skillCardIds, path, issues) {
+function validateConvictDef(card, skillCardIds, path, issues) {
   if (!isPlainObject(card)) {
     pushIssue(issues, path, 'must be an object');
     return;
@@ -339,10 +339,10 @@ function validateScenario(scenario, refs, path, issues) {
     return;
   }
 
-  if (!validateStringArray(scenario.setup.convictIds, `${path}.setup.convictIds`, issues)) return;
-  scenario.setup.convictIds.forEach((convictId, index) => {
-    if (isNonEmptyString(convictId) && !refs.convictIds.has(convictId)) {
-      pushIssue(issues, `${path}.setup.convictIds[${index}]`, `references unknown convict "${convictId}"`);
+  if (!validateStringArray(scenario.setup.convictDefIds, `${path}.setup.convictDefIds`, issues)) return;
+  scenario.setup.convictDefIds.forEach((convictDefId, index) => {
+    if (isNonEmptyString(convictDefId) && !refs.convictDefIds.has(convictDefId)) {
+      pushIssue(issues, `${path}.setup.convictDefIds[${index}]`, `references unknown convict definition "${convictDefId}"`);
     }
   });
 
@@ -424,7 +424,7 @@ export function validateWardensDebtContent(content) {
     'dice',
     'conditionTokens',
     'skillCards',
-    'convictCards',
+    'convictDefs',
     'monsterCards',
     'eventCards',
     'itemCards',
@@ -449,18 +449,18 @@ export function validateWardensDebtContent(content) {
   content.dice.forEach((die, index) => validateDice(die, `dice[${index}]`, issues));
   content.conditionTokens.forEach((token, index) => validateConditionToken(token, `conditionTokens[${index}]`, issues));
 
-  const convictIds = new Set(content.convictCards.map(card => card.id).filter(isNonEmptyString));
+  const convictDefIds = new Set(content.convictDefs.map(card => card.id).filter(isNonEmptyString));
   const conditionIds = new Set(content.conditionTokens.map(token => token.id).filter(isNonEmptyString));
   const mapTileIds = new Set(content.mapTiles.map(tile => tile.id).filter(isNonEmptyString));
   const monsterCardIds = new Set(content.monsterCards.map(card => card.id).filter(isNonEmptyString));
 
   content.skillCards.forEach((card, index) =>
-    validateSkillCard(card, convictIds, conditionIds, `skillCards[${index}]`, issues)
+    validateSkillCard(card, convictDefIds, conditionIds, `skillCards[${index}]`, issues)
   );
 
   const skillCardIds = new Set(content.skillCards.map(card => card.id).filter(isNonEmptyString));
-  content.convictCards.forEach((card, index) =>
-    validateConvictCard(card, skillCardIds, `convictCards[${index}]`, issues)
+  content.convictDefs.forEach((card, index) =>
+    validateConvictDef(card, skillCardIds, `convictDefs[${index}]`, issues)
   );
   content.monsterCards.forEach((card, index) => validateMonsterCard(card, `monsterCards[${index}]`, issues));
   content.eventCards.forEach((card, index) =>
@@ -493,7 +493,7 @@ export function validateWardensDebtContent(content) {
   content.decks.forEach((deck, index) => validateDeck(deck, deckIdsByKind, `decks[${index}]`, issues));
 
   const refs = {
-    convictIds,
+    convictDefIds,
     commonSkillDeckIds: new Set(content.decks.filter(deck => deck.kind === 'common-skill').map(deck => deck.id)),
     monsterDeckIds: new Set(content.decks.filter(deck => deck.kind === 'monster').map(deck => deck.id)),
     eventDeckIds: new Set(content.decks.filter(deck => deck.kind === 'event').map(deck => deck.id)),
@@ -521,7 +521,7 @@ export function indexWardensDebtContent(content) {
     diceById: new Map(content.dice.map(item => [item.id, item])),
     conditionTokensById: new Map(content.conditionTokens.map(item => [item.id, item])),
     skillCardsById: new Map(content.skillCards.map(item => [item.id, item])),
-    convictCardsById: new Map(content.convictCards.map(item => [item.id, item])),
+    convictDefsById: new Map(content.convictDefs.map(item => [item.id, item])),
     monsterCardsById: new Map(content.monsterCards.map(item => [item.id, item])),
     eventCardsById: new Map(content.eventCards.map(item => [item.id, item])),
     itemCardsById: new Map(content.itemCards.map(item => [item.id, item])),
@@ -555,7 +555,7 @@ function buildEmptyActiveCards() {
   };
 }
 
-function validateQueuedSkillCards(queue, path, issues, contentIndex, playerCount) {
+function validateQueuedSkillCards(queue, path, issues, contentIndex, convictCount) {
   if (!Array.isArray(queue)) {
     pushIssue(issues, path, 'must be an array');
     return;
@@ -567,8 +567,8 @@ function validateQueuedSkillCards(queue, path, issues, contentIndex, playerCount
       pushIssue(issues, entryPath, 'must be an object');
       return;
     }
-    if (!isNonNegativeInteger(entry.playerIndex) || entry.playerIndex >= playerCount) {
-      pushIssue(issues, `${entryPath}.playerIndex`, 'must reference a valid player index');
+    if (!isNonNegativeInteger(entry.convictIndex) || entry.convictIndex >= convictCount) {
+      pushIssue(issues, `${entryPath}.convictIndex`, 'must reference a valid convict index');
     }
     if (!isNonEmptyString(entry.cardId)) {
       pushIssue(issues, `${entryPath}.cardId`, 'must be a non-empty string');
@@ -589,17 +589,17 @@ export function createWardensDebtGameState(content, scenarioId) {
     throw new Error(`Unknown Wardens Debt scenario "${scenarioId}"`);
   }
 
-  const players = scenario.setup.convictIds.map((convictId, playerIndex) => {
-    const convict = index.convictCardsById.get(convictId);
-    const starterSkillCardIds = convict ? [...convict.starterSkillCardIds] : [];
+  const convicts = scenario.setup.convictDefIds.map((convictDefId, convictIndex) => {
+    const convictDef = index.convictDefsById.get(convictDefId);
+    const starterSkillCardIds = convictDef ? [...convictDef.starterSkillCardIds] : [];
 
     return {
-      id: `player-${playerIndex + 1}`,
-      name: convict?.name || `Player ${playerIndex + 1}`,
-      convictId,
-      health: convict?.health ?? 0,
-      maxHealth: convict?.health ?? 0,
-      handSize: convict?.handSize ?? 0,
+      id: `convict-${convictIndex + 1}`,
+      name: convictDef?.name || `Convict ${convictIndex + 1}`,
+      convictDefId,
+      health: convictDef?.health ?? 0,
+      maxHealth: convictDef?.health ?? 0,
+      handSize: convictDef?.handSize ?? 0,
       starterSkillCardIds,
       hand: [],
       drawPile: [...starterSkillCardIds],
@@ -635,7 +635,7 @@ export function createWardensDebtGameState(content, scenarioId) {
     scenarioId: scenario.id,
     turn: {
       round: 1,
-      activeSide: 'players',
+      activeSide: 'convicts',
       phase: 'start-round',
     },
     dicePool: scenario.setup.diceIds.map(dieId => {
@@ -647,7 +647,7 @@ export function createWardensDebtGameState(content, scenarioId) {
       };
     }),
     conditionSupply: [...scenario.setup.conditionTokenIds],
-    players,
+    convicts,
     enemies,
     decks: {
       commonSkillDecks: scenario.setup.commonSkillDeckIds
@@ -704,7 +704,7 @@ export function validateWardensDebtGameState(gameState, contentIndex) {
 
   if (!Array.isArray(gameState.dicePool)) pushIssue(issues, 'dicePool', 'must be an array');
   if (!Array.isArray(gameState.conditionSupply)) pushIssue(issues, 'conditionSupply', 'must be an array');
-  if (!Array.isArray(gameState.players)) pushIssue(issues, 'players', 'must be an array');
+  if (!Array.isArray(gameState.convicts)) pushIssue(issues, 'convicts', 'must be an array');
   if (!Array.isArray(gameState.enemies)) pushIssue(issues, 'enemies', 'must be an array');
   if (!isPlainObject(gameState.decks)) pushIssue(issues, 'decks', 'must be an object');
   if (!isPlainObject(gameState.activeCards)) pushIssue(issues, 'activeCards', 'must be an object');
@@ -742,26 +742,26 @@ export function validateWardensDebtGameState(gameState, contentIndex) {
     }
   });
 
-  gameState.players.forEach((player, index) => {
-    const path = `players[${index}]`;
-    if (!isPlainObject(player)) {
+  gameState.convicts.forEach((convict, index) => {
+    const path = `convicts[${index}]`;
+    if (!isPlainObject(convict)) {
       pushIssue(issues, path, 'must be an object');
       return;
     }
-    if (!isNonEmptyString(player.id)) pushIssue(issues, `${path}.id`, 'must be a non-empty string');
-    if (!isNonEmptyString(player.convictId)) pushIssue(issues, `${path}.convictId`, 'must be a non-empty string');
-    else if (contentIndex && !contentIndex.convictCardsById.has(player.convictId)) pushIssue(issues, `${path}.convictId`, `references unknown convict "${player.convictId}"`);
+    if (!isNonEmptyString(convict.id)) pushIssue(issues, `${path}.id`, 'must be a non-empty string');
+    if (!isNonEmptyString(convict.convictDefId)) pushIssue(issues, `${path}.convictDefId`, 'must be a non-empty string');
+    else if (contentIndex && !contentIndex.convictDefsById.has(convict.convictDefId)) pushIssue(issues, `${path}.convictDefId`, `references unknown convict definition "${convict.convictDefId}"`);
     ['starterSkillCardIds', 'drawPile', 'conditions'].forEach(key => {
-      if (!validateStringArray(player[key], `${path}.${key}`, issues)) return;
+      if (!validateStringArray(convict[key], `${path}.${key}`, issues)) return;
       if (contentIndex && ['starterSkillCardIds', 'drawPile'].includes(key)) {
-        player[key].forEach((cardId, cardIndex) => {
+        convict[key].forEach((cardId, cardIndex) => {
           if (isNonEmptyString(cardId) && !contentIndex.skillCardsById.has(cardId)) {
             pushIssue(issues, `${path}.${key}[${cardIndex}]`, `references unknown skill card "${cardId}"`);
           }
         });
       }
       if (contentIndex && key === 'conditions') {
-        player[key].forEach((conditionId, conditionIndex) => {
+        convict[key].forEach((conditionId, conditionIndex) => {
           if (isNonEmptyString(conditionId) && !contentIndex.conditionTokensById.has(conditionId)) {
             pushIssue(issues, `${path}.${key}[${conditionIndex}]`, `references unknown condition token "${conditionId}"`);
           }
@@ -770,8 +770,8 @@ export function validateWardensDebtGameState(gameState, contentIndex) {
     });
 
     ['hand', 'discardPile', 'banished'].forEach(key => {
-      if (!validateStringArray(player[key], `${path}.${key}`, issues)) return;
-      player[key].forEach((cardId, cardIndex) => {
+      if (!validateStringArray(convict[key], `${path}.${key}`, issues)) return;
+      convict[key].forEach((cardId, cardIndex) => {
         if (!isNonEmptyString(cardId)) return;
         const isSkillCard = contentIndex?.skillCardsById.has(cardId);
         if (!isSkillCard) {
@@ -817,8 +817,8 @@ export function validateWardensDebtGameState(gameState, contentIndex) {
     });
   });
 
-  validateQueuedSkillCards(gameState.activeCards.fastSkills, 'activeCards.fastSkills', issues, contentIndex, gameState.players.length);
-  validateQueuedSkillCards(gameState.activeCards.slowSkills, 'activeCards.slowSkills', issues, contentIndex, gameState.players.length);
+  validateQueuedSkillCards(gameState.activeCards.fastSkills, 'activeCards.fastSkills', issues, contentIndex, gameState.convicts.length);
+  validateQueuedSkillCards(gameState.activeCards.slowSkills, 'activeCards.slowSkills', issues, contentIndex, gameState.convicts.length);
 
   if (!isNonEmptyString(gameState.board.locationCardId) && gameState.board.locationCardId !== null) {
     pushIssue(issues, 'board.locationCardId', 'must be a non-empty string or null');
