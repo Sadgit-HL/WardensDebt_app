@@ -2,6 +2,8 @@
 
 export const uiState = {
   selectedHex:      null,
+  selectedCell:     null,
+  selectedWdMapTile: null,
   selected:         null,
   stack:            [],
   expandedSections: new Set(),
@@ -21,6 +23,8 @@ function notify() { listeners.forEach(fn => fn()); }
 
 export function selectHex(col, row) {
   uiState.selectedHex  = { col, row };
+  uiState.selectedCell  = null;
+  uiState.selectedWdMapTile = null;
   uiState.selected     = null;
   uiState.stack        = [];
   uiState.addPanelOpen = false;
@@ -32,6 +36,8 @@ export function selectHex(col, row) {
 
 export function selectObject(kind, idx, col, row) {
   uiState.selectedHex  = { col, row };
+  uiState.selectedCell  = null;
+  uiState.selectedWdMapTile = null;
   uiState.selected     = { kind, idx };
   uiState.stack        = [];
   uiState.addPanelOpen = false;
@@ -43,6 +49,8 @@ export function selectObject(kind, idx, col, row) {
 
 export function showStack(objects, col, row) {
   uiState.selectedHex  = { col, row };
+  uiState.selectedCell  = null;
+  uiState.selectedWdMapTile = null;
   uiState.selected     = null;
   uiState.stack        = objects;
   uiState.addPanelOpen = false;
@@ -54,6 +62,8 @@ export function showStack(objects, col, row) {
 
 export function showStackWithSelection(objects, col, row, kind, idx) {
   uiState.selectedHex  = { col, row };
+  uiState.selectedCell  = null;
+  uiState.selectedWdMapTile = null;
   uiState.selected     = { kind, idx };
   uiState.stack        = objects;
   uiState.addPanelOpen = false;
@@ -65,7 +75,28 @@ export function showStackWithSelection(objects, col, row, kind, idx) {
 
 export function selectFromStack(kind, idx) {
   uiState.selected = { kind, idx };
+  uiState.selectedWdMapTile = null;
   uiState.stack    = [];
+  notify();
+}
+
+export function selectWardensDebtCell(x, y) {
+  uiState.selectedHex = null;
+  uiState.selectedCell = { x, y };
+  uiState.stack = [];
+  notify();
+}
+
+export function selectWardensDebtMapTile(id) {
+  uiState.selectedHex = null;
+  uiState.selectedCell = null;
+  uiState.selectedWdMapTile = id ? { id } : null;
+  uiState.selected = null;
+  uiState.stack = [];
+  uiState.addPanelOpen = false;
+  uiState.mobilePanel = 'selection';
+  uiState.mobileDetailsOpen = false;
+  uiState.mobileMoveMode = false;
   notify();
 }
 
@@ -76,6 +107,8 @@ export function deselectObject() {
 
 export function clearSelection() {
   uiState.selectedHex  = null;
+  uiState.selectedCell  = null;
+  uiState.selectedWdMapTile = null;
   uiState.selected     = null;
   uiState.stack        = [];
   uiState.addPanelOpen = false;

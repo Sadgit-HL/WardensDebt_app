@@ -11,8 +11,7 @@ import { HEX_W, HEX_H, COLS, ROWS, hexCenter }        from './hex.js';
 import { GAME_NAME }                                   from './data.js';
 import { clearSelection }                              from './uiState.js';
 import { subscribeUI, uiState }                        from './uiState.js';
-import { initWardensDebtDebugPanel }                   from './wardensDebt/debugPanel.js';
-import { initWardensDebtRuntime }                      from './wardensDebt/runtime.js';
+import { initWardensDebtRuntime, subscribeWardensDebtRuntime } from './wardensDebt/runtime.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   document.title = `HavenMap — ${GAME_NAME}`;
@@ -75,7 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initShare();
   initMobile();
   void initWardensDebtRuntime();
-  void initWardensDebtDebugPanel();
 
   function updateHistoryButtons() {
     if (undoBtn) undoBtn.disabled = !canUndo();
@@ -131,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Re-render whenever state changes
   subscribe(() => { renderAll(state); renderElements(); renderLevel(); setGridLabelsVisible(state.showGridLabels); updateHistoryButtons(); });
+  subscribeWardensDebtRuntime(() => { renderAll(state); });
   subscribeUI(() => { renderSelection(); });
 
   // Load from URL hash (triggers the subscriber above)

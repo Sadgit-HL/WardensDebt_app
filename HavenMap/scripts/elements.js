@@ -4,6 +4,8 @@ import {
   drawWardensDebtConvictCard,
   playWardensDebtSkillCard,
   redrawWardensDebtConvictHand,
+  rollWardensDebtDie,
+  rollWardensDebtDicePool,
   resolveWardensDebtActiveCardToDiscard,
   retreatWardensDebtPhase,
   startNextWardensDebtRound,
@@ -20,6 +22,8 @@ import { uiState, selectFromStack, subscribeUI } from './uiState.js';
 
 let activeConvictIndex = 0;
 let statusMessage = '';
+let playbarExpanded = false;
+let selectedActiveCardRef = null;
 
 export function cycleElement(index) {
   const els = [...state.elements];
@@ -91,6 +95,21 @@ function activeCardDetails(runtime, config, cardId) {
   return runtime.index?.[config.indexKey]?.get(cardId) || null;
 }
 
+function sharedDeckButtons(runtime) {
+  return ACTIVE_DECK_GROUPS
+    .filter(config => runtime.gameState.decks?.[config.deckGroup])
+    .map(config => {
+      const deckState = runtime.gameState.decks[config.deckGroup];
+      const remaining = Array.isArray(deckState.drawPile) ? deckState.drawPile.length : 0;
+      return `
+        <button class="wd-shared-deck-btn" data-wd-action="draw-active" data-deck-group="${config.deckGroup}" ${remaining > 0 ? '' : 'disabled'}>
+          <span class="wd-shared-deck-label">${config.label}</span>
+          <span class="wd-shared-deck-count">${remaining}</span>
+        </button>
+      `;
+    }).join('');
+}
+
 function queuedSkillSections(runtime) {
   const queueConfigs = [
     { key: 'fastSkills', label: 'Fast Skills' },
@@ -99,6 +118,8 @@ function queuedSkillSections(runtime) {
 
   return queueConfigs.map(config => {
     const queue = runtime.gameState.activeCards?.[config.key] || [];
+    if (!queue.length) return '';
+
     const cardsHtml = queue.map((queuedCard, queueIndex) => {
       const convict = runtime.gameState.convicts?.[queuedCard.convictIndex];
       const card = cardDetails(runtime, queuedCard.cardId);
@@ -119,7 +140,7 @@ function queuedSkillSections(runtime) {
     return `
       <div class="wd-playbar-subhead">${config.label}</div>
       <div class="wd-playbar-hand">
-        ${cardsHtml || `<div class="wd-playbar-empty">No ${config.label.toLowerCase()}.</div>`}
+        ${cardsHtml}
       </div>
     `;
   }).join('');
@@ -155,6 +176,137 @@ function renderError(playbar, runtime) {
   `;
 }
 
+function renderDiceTray(runtime) {
+  const diceTray = document.getElementById('wd-dice-tray');
+  if (!diceTray) return;
+
+  if (runtime.status !== 'ready' || !runtime.gameState) {
+    diceTray.innerHTML = '<div class="wd-tray-empty">Dice loading</div>';
+    return;
+  }
+
+  const dicePool = runtime.gameState.dicePool || [];
+  const diceTotal = dicePool.reduce((total, dieState) => {
+    return total + (Number.isInteger(dieState.currentValue) ? dieState.currentValue : 0);
+  }, 0);
+
+  const diceHtml = dicePool.map((dieState, dieIndex) => `
+    <button class="wd-tray-die" type="button" data-wd-action="roll-die" data-die-index="${dieIndex}" title="Roll ${escapeHtml(dieState.dieId)}" aria-label="Roll ${escapeHtml(dieState.dieId)}">
+      <span class="wd-tray-die-value">${escapeHtml(dieState.currentValue ?? '•')}</span>
+    </button>
+  `).join('');
+
+  diceTray.innerHTML = `
+    <div class="wd-tray-total" title="Dice total">${diceTotal}</div>
+    ${diceHtml || '<div class="wd-tray-empty">No dice</div>'}
+    ${dicePool.length ? '<button class="wd-tray-roll-all" type="button" data-wd-action="roll-all-dice" title="Roll all dice">Roll</button>' : ''}
+  `;
+}
+
+function renderPhaseStrip(runtime) {
+  const phaseStrip = document.getElementById('wd-phase-strip');
+  if (!phaseStrip) return;
+
+  if (runtime.status !== 'ready' || !runtime.gameState) {
+    phaseStrip.innerHTML = `
+      <div class="wd-phase-strip-copy">
+        <div class="wd-playbar-eyebrow">Round Structure</div>
+        <div class="wd-playbar-title">Loading phases</div>
+      </div>
+    `;
+    return;
+  }
+
+  phaseStrip.innerHTML = `
+    <div class="wd-phase-strip-copy">
+      <div class="wd-playbar-eyebrow">Round ${runtime.gameState.turn.round}</div>
+      <div class="wd-playbar-meta">${escapeHtml(formatPhaseName(runtime.gameState.turn.phase))}</div>
+    </div>
+    <div class="wd-phase-track">
+      ${WARDENS_DEBT_PHASE_SEQUENCE.map(phase => `
+        <div class="wd-phase-chip${runtime.gameState.turn.phase === phase ? ' is-active' : ''}">
+          ${escapeHtml(formatPhaseName(phase))}
+        </div>
+      `).join('')}
+    </div>
+    <div class="wd-phase-buttons">
+      <button class="wd-playbar-mini-btn" data-wd-action="phase-prev" title="Previous Phase" aria-label="Previous Phase">‹</button>
+      <button class="wd-playbar-mini-btn" data-wd-action="phase-next" title="Next Phase" aria-label="Next Phase">›</button>
+      <button class="wd-playbar-mini-btn" data-wd-action="round-next" title="Next Round" aria-label="Next Round">R+</button>
+    </div>
+  `;
+}
+
+function renderSharedDeckTopbar(runtime) {
+  const sharedDecks = document.getElementById('wd-shared-decks');
+  if (!sharedDecks) return;
+
+  if (runtime.status !== 'ready' || !runtime.gameState) {
+    sharedDecks.innerHTML = `
+      <div class="wd-playbar-meta">Decks loading</div>
+    `;
+    return;
+  }
+
+  sharedDecks.innerHTML = `
+    <div class="wd-shared-deck-list" aria-label="Shared decks">
+      ${sharedDeckButtons(runtime) || '<div class="wd-playbar-empty">No shared decks.</div>'}
+    </div>
+  `;
+}
+
+function renderActiveStrip(runtime) {
+  const activeStrip = document.getElementById('wd-active-strip');
+  if (!activeStrip) return;
+
+  if (runtime.status !== 'ready' || !runtime.gameState) {
+    activeStrip.innerHTML = '';
+    return;
+  }
+
+  let selectedDetailHtml = '';
+
+  const groupsHtml = ACTIVE_DECK_GROUPS.map(config => {
+    const cardIds = runtime.gameState.activeCards?.[config.activeGroup] || [];
+    if (!cardIds.length) return '';
+
+    const chipsHtml = cardIds.map((cardId, activeIndex) => {
+      const card = activeCardDetails(runtime, config, cardId);
+      const isSelected = selectedActiveCardRef?.activeGroup === config.activeGroup
+        && selectedActiveCardRef?.activeIndex === activeIndex;
+      if (isSelected) {
+        selectedDetailHtml = `
+          <article class="wd-active-strip-detail">
+            <div class="wd-active-strip-detail-top">
+              <div>
+                <div class="wd-active-strip-type">${escapeHtml(config.label)}</div>
+                <div class="wd-active-strip-detail-title">${escapeHtml(card?.name || cardId)}</div>
+              </div>
+              <button class="wd-active-strip-resolve" data-wd-action="resolve-active" data-active-group="${config.activeGroup}" data-active-index="${activeIndex}">Resolve</button>
+            </div>
+            ${card?.text ? `<div class="wd-active-strip-detail-text">${escapeHtml(card.text)}</div>` : ''}
+          </article>
+        `;
+      }
+      return `
+        <button class="wd-active-strip-chip${isSelected ? ' is-selected' : ''}" data-wd-ui-action="select-active-card" data-active-group="${config.activeGroup}" data-active-index="${activeIndex}" title="${escapeHtml(card?.name || cardId)}">
+          <span class="wd-active-strip-type">${escapeHtml(config.label)}</span>
+          <span class="wd-active-strip-name">${escapeHtml(card?.name || cardId)}</span>
+        </button>
+      `;
+    }).join('');
+
+    return `<div class="wd-active-strip-group">${chipsHtml}</div>`;
+  }).join('');
+
+  activeStrip.innerHTML = groupsHtml
+    ? `
+      <div class="wd-active-strip-list" aria-label="Active shared cards">${groupsHtml}</div>
+      ${selectedDetailHtml}
+    `
+    : '';
+}
+
 function renderReady(playbar, runtime) {
   const convict = activeConvict(runtime);
   if (!convict) {
@@ -178,18 +330,6 @@ function renderReady(playbar, runtime) {
     `;
   }).join('');
 
-  const activeDeckButtons = ACTIVE_DECK_GROUPS
-    .filter(config => runtime.gameState.decks?.[config.deckGroup])
-    .map(config => {
-      const deckState = runtime.gameState.decks[config.deckGroup];
-      const remaining = Array.isArray(deckState.drawPile) ? deckState.drawPile.length : 0;
-      return `
-        <button class="wd-playbar-mini-btn" data-wd-action="draw-active" data-deck-group="${config.deckGroup}" ${remaining > 0 ? '' : 'disabled'}>
-          ${config.label} (${remaining})
-        </button>
-      `;
-    }).join('');
-
   const handCards = convict.hand.map((cardId, handIndex) => {
     const card = cardDetails(runtime, cardId);
     const canSelectCard = runtime.gameState.turn.phase === 'select-cards';
@@ -205,46 +345,8 @@ function renderReady(playbar, runtime) {
     `;
   }).join('');
 
-  const activeCards = ACTIVE_DECK_GROUPS.flatMap(config => {
-    const cardIds = runtime.gameState.activeCards?.[config.activeGroup] || [];
-    return cardIds.map((cardId, activeIndex) => {
-      const card = activeCardDetails(runtime, config, cardId);
-      return `
-        <article class="wd-active-card">
-          <div class="wd-active-card-top">
-            <div class="wd-active-card-type">${escapeHtml(config.label)}</div>
-            <button class="wd-skill-play-btn" data-wd-action="resolve-active" data-active-group="${config.activeGroup}" data-active-index="${activeIndex}">
-              Resolve
-            </button>
-          </div>
-          <div class="wd-active-card-title">${escapeHtml(card?.name || cardId)}</div>
-          <div class="wd-active-card-text">${escapeHtml(card?.text || '')}</div>
-        </article>
-      `;
-    });
-  }).join('');
-
   playbar.innerHTML = `
     <div class="wd-playbar">
-      <div class="wd-phase-bar">
-        <div class="wd-phase-copy">
-          <div class="wd-playbar-eyebrow">Round Structure</div>
-          <div class="wd-playbar-title">Round ${runtime.gameState.turn.round}</div>
-          <div class="wd-playbar-meta">Current phase: ${escapeHtml(formatPhaseName(runtime.gameState.turn.phase))}</div>
-        </div>
-        <div class="wd-phase-buttons">
-          <button class="wd-playbar-mini-btn" data-wd-action="phase-prev">Previous Phase</button>
-          <button class="wd-playbar-mini-btn" data-wd-action="phase-next">Next Phase</button>
-          <button class="wd-playbar-mini-btn" data-wd-action="round-next">Next Round</button>
-        </div>
-      </div>
-      <div class="wd-phase-track">
-        ${WARDENS_DEBT_PHASE_SEQUENCE.map(phase => `
-          <div class="wd-phase-chip${runtime.gameState.turn.phase === phase ? ' is-active' : ''}">
-            ${escapeHtml(formatPhaseName(phase))}
-          </div>
-        `).join('')}
-      </div>
       <div class="wd-playbar-top">
         <div class="wd-playbar-players">
           ${(runtime.gameState.convicts || []).map((entry, idx) => `
@@ -253,8 +355,6 @@ function renderReady(playbar, runtime) {
             </button>
           `).join('')}
         </div>
-      </div>
-      <div class="wd-playbar-actions">
         <div class="wd-playbar-copy">
           <div class="wd-playbar-eyebrow">Convict</div>
           <div class="wd-playbar-title">${escapeHtml(convict.name)}</div>
@@ -264,21 +364,29 @@ function renderReady(playbar, runtime) {
           <button class="wd-playbar-btn" data-wd-action="draw-convict" ${(convict.drawPile.length || convict.discardPile.length) ? '' : 'disabled'}>Draw Starter</button>
           <button class="wd-playbar-btn" data-wd-action="redraw-hand" ${(convict.hand.length || convict.drawPile.length || convict.discardPile.length) ? '' : 'disabled'}>Redraw Hand</button>
           ${commonDeckButtons}
-          ${activeDeckButtons}
         </div>
       </div>
       ${statusMessage ? `<div class="wd-playbar-status">${escapeHtml(statusMessage)}</div>` : ''}
-      <div class="wd-playbar-subhead">Hand</div>
-      <div class="wd-playbar-hand">
-        ${handCards || '<div class="wd-playbar-empty">No skill cards in hand.</div>'}
-      </div>
+      ${handCards ? `
+        <div class="wd-playbar-subhead">Hand</div>
+        <div class="wd-playbar-hand">
+          ${handCards}
+        </div>
+      ` : ''}
       ${queuedSkillSections(runtime)}
-      <div class="wd-playbar-subhead">Active Cards</div>
-      <div class="wd-playbar-hand">
-        ${activeCards || '<div class="wd-playbar-empty">No active cards.</div>'}
-      </div>
     </div>
   `;
+}
+
+function syncPlaybarExpandedState() {
+  const elementBar = document.getElementById('element-bar');
+  const toggle = document.getElementById('wd-playbar-toggle');
+  elementBar?.classList.toggle('is-compact', !playbarExpanded);
+  elementBar?.classList.toggle('is-expanded', playbarExpanded);
+  if (toggle) {
+    toggle.setAttribute('aria-expanded', playbarExpanded ? 'true' : 'false');
+    toggle.textContent = playbarExpanded ? 'Hide Player Board' : 'Player Board';
+  }
 }
 
 export function renderElements() {
@@ -288,13 +396,28 @@ export function renderElements() {
   const runtime = getWardensDebtRuntime();
   if (runtime.status === 'loading' || runtime.status === 'idle') {
     renderLoading(playbar);
+    renderSharedDeckTopbar(runtime);
+    renderActiveStrip(runtime);
+    renderPhaseStrip(runtime);
+    renderDiceTray(runtime);
+    syncPlaybarExpandedState();
     return;
   }
   if (runtime.status === 'error') {
     renderError(playbar, runtime);
+    renderSharedDeckTopbar(runtime);
+    renderActiveStrip(runtime);
+    renderPhaseStrip(runtime);
+    renderDiceTray(runtime);
+    syncPlaybarExpandedState();
     return;
   }
   renderReady(playbar, runtime);
+  renderSharedDeckTopbar(runtime);
+  renderActiveStrip(runtime);
+  renderPhaseStrip(runtime);
+  renderDiceTray(runtime);
+  syncPlaybarExpandedState();
 }
 
 function setStatus(message) {
@@ -382,6 +505,22 @@ function handleAction(actionButton) {
       return;
     }
 
+    if (action === 'roll-die') {
+      const dieIndex = Number(actionButton.dataset.dieIndex);
+      if (!Number.isInteger(dieIndex)) return;
+      const result = rollWardensDebtDie(runtime.gameState, runtime.index, dieIndex);
+      setWardensDebtGameState(result.gameState);
+      setStatus(`Rolled ${result.rolledValue} on ${result.dieId}. Total: ${result.total}.`);
+      return;
+    }
+
+    if (action === 'roll-all-dice') {
+      const result = rollWardensDebtDicePool(runtime.gameState, runtime.index);
+      setWardensDebtGameState(result.gameState);
+      setStatus(`Rolled all dice. Total: ${result.total}.`);
+      return;
+    }
+
     if (action === 'play-card') {
       const handIndex = Number(actionButton.dataset.handIndex);
       const result = playWardensDebtSkillCard(
@@ -401,6 +540,7 @@ function handleAction(actionButton) {
       const activeIndex = Number(actionButton.dataset.activeIndex);
       if (!activeGroup || !Number.isInteger(activeIndex)) return;
       const result = resolveWardensDebtActiveCardToDiscard(runtime.gameState, runtime.index, activeGroup, activeIndex);
+      selectedActiveCardRef = null;
       setWardensDebtGameState(result.gameState);
       setStatus(`Resolved ${result.cardId} to ${activeGroup} discard.`);
     }
@@ -411,13 +551,35 @@ function handleAction(actionButton) {
 
 export function initElements() {
   const playbar = document.getElementById('wd-playbar');
-  if (!playbar) return;
+  const elementBar = document.getElementById('element-bar');
+  const topbar = document.getElementById('wd-topbar');
+  if (!playbar || !elementBar) return;
 
-  playbar.addEventListener('click', event => {
+  const handleContainerClick = event => {
+    const uiButton = event.target.closest('[data-wd-ui-action]');
+    if (uiButton?.dataset.wdUiAction === 'toggle-playbar') {
+      playbarExpanded = !playbarExpanded;
+      syncPlaybarExpandedState();
+      return;
+    }
+    if (uiButton?.dataset.wdUiAction === 'select-active-card') {
+      const activeGroup = uiButton.dataset.activeGroup;
+      const activeIndex = Number(uiButton.dataset.activeIndex);
+      if (!activeGroup || !Number.isInteger(activeIndex)) return;
+      const isSameSelection = selectedActiveCardRef?.activeGroup === activeGroup
+        && selectedActiveCardRef?.activeIndex === activeIndex;
+      selectedActiveCardRef = isSameSelection ? null : { activeGroup, activeIndex };
+      renderElements();
+      return;
+    }
+
     const actionButton = event.target.closest('[data-wd-action]');
     if (!actionButton) return;
     handleAction(actionButton);
-  });
+  };
+
+  elementBar.addEventListener('click', handleContainerClick);
+  topbar?.addEventListener('click', handleContainerClick);
 
   subscribeWardensDebtRuntime(() => {
     statusMessage = '';
@@ -425,4 +587,5 @@ export function initElements() {
   });
   subscribeUI(renderElements);
   renderElements();
+  syncPlaybarExpandedState();
 }

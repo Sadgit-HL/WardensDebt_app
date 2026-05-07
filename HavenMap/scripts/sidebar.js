@@ -6,6 +6,7 @@ import {
   toggleCondPicker, closeCondPicker,
   deselectObject, selectFromStack,
   selectHex, selectObject, showStack, showStackWithSelection, clearSelection,
+  selectWardensDebtMapTile,
 } from './uiState.js';
 import { state, patch, subscribe } from './state.js';
 import { getShareMode, setShareMode, SHARE_MODES } from './share.js';
@@ -13,12 +14,17 @@ import { assetPath, TILES, OVERLAY_OBJECTS, MONSTERS, MERCENARIES, SUMMONS, COND
 import { colLabel, footprintHexes, hexCenter } from './hex.js';
 import { centerBoardPoint } from './controls.js';
 import { displayCurrentHp, displayMaxHp } from './hp.js';
+import { ROTATION_STEP } from './rotation.js';
 import {
   getWardensDebtRuntime,
   subscribeWardensDebtRuntime,
   updateWardensDebtEnemy,
   updateWardensDebtConvict,
+  updateWardensDebtGameState,
 } from './wardensDebt/runtime.js';
+import {
+  wardensDebtFigurePosition,
+} from './wardensDebt/placement.js';
 
 // ─── Kind → state key + data table ───────────────────────────────────────────
 
@@ -38,6 +44,21 @@ const WARDENS_DEBT_KIND_MAP = {
   'wd-enemy':  { stateKey: 'enemies', label: 'Monster' },
 };
 
+const WARDENS_DEBT_PLACEHOLDERS = {
+  convict: {
+    name: 'Placeholder Convict',
+    color: '#72ab84',
+  },
+  enemy: {
+    name: 'Placeholder Enemy',
+    color: '#e35f5f',
+  },
+  maptile: {
+    name: 'Placeholder Maptile',
+    color: '#b7a06a',
+  },
+};
+
 function isWardensDebtKind(kind) {
   return Boolean(WARDENS_DEBT_KIND_MAP[kind]);
 }
@@ -54,6 +75,135 @@ function wardensDebtSelectionContext(sel = uiState.selected) {
 
 function wardensDebtConditionLabel(runtime, conditionId) {
   return runtime.index?.conditionTokensById.get(conditionId)?.name || conditionId;
+}
+
+function updateWardensDebtMapTile(tileId, updater) {
+  return updateWardensDebtGameState(gameState => {
+    gameState.board.mapTiles = (gameState.board.mapTiles || []).map(tile =>
+      tile.id === tileId ? updater({ ...tile }) : tile
+    );
+    return gameState;
+  });
+}
+
+function deleteWardensDebtMapTile(tileId) {
+  return updateWardensDebtGameState(gameState => {
+    gameState.board.mapTiles = (gameState.board.mapTiles || []).filter(tile => tile.id !== tileId);
+    gameState.board.mapTileIds = (gameState.board.mapTileIds || []).filter(id => id !== tileId);
+    return gameState;
+  });
+}
+
+function updateWardensDebtFigurePosition(figureId, updater) {
+  return updateWardensDebtGameState(gameState => {
+    const current = gameState.board.figurePositions?.[figureId] || { x: 0, y: 0 };
+    gameState.board.figurePositions = {
+      ...(gameState.board.figurePositions || {}),
+      [figureId]: updater({ ...current }),
+    };
+    return gameState;
+  });
+}
+
+function deleteWardensDebtFigure(figureId) {
+  return updateWardensDebtGameState(gameState => {
+    gameState.convicts = (gameState.convicts || []).filter(convict => convict.id !== figureId);
+    gameState.enemies = (gameState.enemies || []).filter(enemy => enemy.instanceId !== figureId);
+    if (gameState.board?.figurePositions) {
+      const { [figureId]: _removed, ...rest } = gameState.board.figurePositions;
+      gameState.board.figurePositions = rest;
+    }
+    if (gameState.zones?.board) {
+      gameState.zones.board = (gameState.zones.board || []).filter(id => id !== figureId);
+    }
+    return gameState;
+  });
+}
+
+function addWardensDebtPlaceholderFigure(kind) {
+  const runtime = getWardensDebtRuntime();
+  if (runtime.status !== 'ready' || !runtime.gameState || !runtime.index) return false;
+
+  const cellSelection = uiState.selectedCell;
+  const placement = cellSelection
+    ? { x: Math.max(0, Math.round(Number(cellSelection.x) || 0)), y: Math.max(0, Math.round(Number(cellSelection.y) || 0)) }
+    : null;
+  if (!placement) return false;
+
+  return updateWardensDebtGameState(gameState => {
+    gameState.board.figurePositions = { ...(gameState.board.figurePositions || {}) };
+
+    if (kind === 'convict') {
+      const source = [...runtime.index.convictDefsById.values()][0];
+      if (!source) return gameState;
+      const nextIndex = gameState.convicts.length + 1;
+      const id = `convict-${nextIndex}`;
+      const figure = {
+        id,
+        name: `${WARDENS_DEBT_PLACEHOLDERS.convict.name} ${nextIndex}`,
+        convictDefId: source.id,
+        health: source.health ?? 0,
+        maxHealth: source.health ?? 0,
+        handSize: source.handSize ?? 0,
+        starterSkillCardIds: [...(source.starterSkillCardIds || [])],
+        hand: [],
+        drawPile: [],
+        discardPile: [],
+        banished: [],
+        resources: 0,
+        guards: 0,
+        conditions: [],
+      };
+      gameState.convicts = [...gameState.convicts, figure];
+      gameState.board.figurePositions[id] = placement;
+      return gameState;
+    }
+
+    if (kind === 'enemy') {
+      const source = [...runtime.index.monsterCardsById.values()][0];
+      if (!source) return gameState;
+      const nextIndex = gameState.enemies.length + 1;
+      const instanceId = `enemy-${nextIndex}`;
+      const enemy = {
+        instanceId,
+        monsterCardId: source.id,
+        name: `${WARDENS_DEBT_PLACEHOLDERS.enemy.name} ${nextIndex}`,
+        currentHealth: source.health ?? 0,
+        maxHealth: source.health ?? 0,
+        attack: source.attack ?? 0,
+        conditions: [],
+        zone: 'board',
+      };
+      gameState.enemies = [...gameState.enemies, enemy];
+      gameState.zones = {
+        ...gameState.zones,
+        board: [...(gameState.zones.board || []), instanceId],
+      };
+      gameState.board.figurePositions[instanceId] = placement;
+      return gameState;
+    }
+
+    return gameState;
+  });
+}
+
+function addWardensDebtPlaceholderMapTile() {
+  const runtime = getWardensDebtRuntime();
+  if (runtime.status !== 'ready' || !runtime.gameState) return false;
+  const tileIds = runtime.gameState.board?.mapTileIds || [];
+  if (tileIds.includes('tile-cell-a')) return false;
+
+  return updateWardensDebtGameState(gameState => {
+    gameState.board.mapTileIds = [...(gameState.board.mapTileIds || []), 'tile-cell-a'];
+    gameState.board.mapTiles = [
+      ...(gameState.board.mapTiles || []),
+      { id: 'tile-cell-a', x: 240, y: 80, angle: 0, locked: false },
+    ];
+    if (!gameState.board.figurePositions) {
+      gameState.board.figurePositions = {};
+    }
+    return gameState;
+  });
 }
 
 function updateWardensDebtSelectedStat(kind, idx, field, newVal) {
@@ -729,7 +879,35 @@ function handleAction(dataset) {
   if (action === 'close-add') { closeAddPanel();  return; }
   if (action === 'close-mobile-details') { closeMobileDetails(); return; }
   if (action === 'wd-select') { selectFromStack(dataset.kind, Number(dataset.idx)); return; }
-  if (action === 'wd-show-roster') { deselectObject(); return; }
+  if (action === 'wd-show-roster') { clearSelection(); return; }
+  if (action === 'wd-add-figure') {
+    addWardensDebtPlaceholderFigure(dataset.figureKind);
+    return;
+  }
+  if (action === 'wd-add-maptile') {
+    addWardensDebtPlaceholderMapTile();
+    return;
+  }
+  if (action === 'wd-rotate-ccw' || action === 'wd-rotate-cw' || action === 'wd-toggle-lock' || action === 'wd-remove-maptile') {
+    const selectedTile = uiState.selectedWdMapTile;
+    if (!selectedTile?.id) return;
+    if (action === 'wd-rotate-ccw' || action === 'wd-rotate-cw') {
+      updateWardensDebtMapTile(selectedTile.id, tile => ({
+        ...tile,
+        angle: ((Number(tile.angle) || 0) + (action === 'wd-rotate-cw' ? ROTATION_STEP : -ROTATION_STEP) + 360) % 360,
+      }));
+      return;
+    }
+    if (action === 'wd-toggle-lock') {
+      updateWardensDebtMapTile(selectedTile.id, tile => ({ ...tile, locked: !tile.locked }));
+      return;
+    }
+    if (action === 'wd-remove-maptile') {
+      deleteWardensDebtMapTile(selectedTile.id);
+      clearSelection();
+      return;
+    }
+  }
 
   const sel = uiState.selected;
   if (!sel) return;
@@ -752,6 +930,30 @@ function handleAction(dataset) {
       updateWardensDebtSelectedConditions(sel.kind, sel.idx, conditions =>
         conditions.filter(conditionId => conditionId !== dataset.cond)
       );
+      return;
+    }
+
+    if (action === 'rotate-ccw' || action === 'rotate-cw' || action === 'toggle-lock' || action === 'remove') {
+      const figureId = sel.kind === 'wd-convict' ? ctx.obj.id : ctx.obj.instanceId;
+      const current = ctx.runtime.gameState?.board?.figurePositions?.[figureId] || {};
+      if (action === 'rotate-ccw' || action === 'rotate-cw') {
+        if (current.locked) return;
+        updateWardensDebtFigurePosition(figureId, pos => ({
+          ...pos,
+          angle: ((Number(pos.angle) || 0) + (action === 'rotate-cw' ? ROTATION_STEP : -ROTATION_STEP) + 360) % 360,
+        }));
+        return;
+      }
+      if (action === 'toggle-lock') {
+        updateWardensDebtFigurePosition(figureId, pos => ({ ...pos, locked: !pos.locked }));
+        return;
+      }
+      if (action === 'remove') {
+        if (current.locked) return;
+        deleteWardensDebtFigure(figureId);
+        clearSelection();
+        return;
+      }
     }
     return;
   }
@@ -811,9 +1013,9 @@ function handleAction(dataset) {
   }
 
   if (action === 'rotate-cw' && !obj.locked) {
-    patchKind(kind, arr.map((x, i) => i === idx ? { ...x, angle: ((Number(x.angle)||0) + 60) % 360 } : x));
+    patchKind(kind, arr.map((x, i) => i === idx ? { ...x, angle: ((Number(x.angle)||0) + ROTATION_STEP) % 360 } : x));
   } else if (action === 'rotate-ccw' && !obj.locked) {
-    patchKind(kind, arr.map((x, i) => i === idx ? { ...x, angle: ((Number(x.angle)||0) - 60 + 360) % 360 } : x));
+    patchKind(kind, arr.map((x, i) => i === idx ? { ...x, angle: ((Number(x.angle)||0) - ROTATION_STEP + 360) % 360 } : x));
   } else if (action === 'toggle-lock') {
     patchKind(kind, arr.map((x, i) => i === idx ? { ...x, locked: !x.locked } : x));
   } else if (action === 'toggle-role' && kind === 'monster' && obj.role !== 'boss') {
@@ -881,14 +1083,14 @@ function findAllAt(col, row) {
 
 function render() {
   const panel = document.getElementById('sidebar-panel');
-  const { selected, stack, selectedHex, addPanelOpen } = uiState;
+  const { selected, stack, selectedHex, selectedWdMapTile, addPanelOpen } = uiState;
   const wdRuntime = getWardensDebtRuntime();
   const sidebarW = window.matchMedia('(max-width: 760px)').matches
     ? '0px'
     : addPanelOpen ? '480px' : '280px';
   document.documentElement.style.setProperty('--sidebar-w', sidebarW);
 
-  if (!selectedHex && !selected && stack.length === 0) {
+  if (!selectedHex && !uiState.selectedCell && !selectedWdMapTile && !selected && stack.length === 0) {
     if (wdRuntime.status === 'loading' || wdRuntime.status === 'ready' || wdRuntime.status === 'error') {
       panel.innerHTML = wardensDebtRosterPanel(wdRuntime);
       return;
@@ -906,8 +1108,16 @@ function render() {
   let html = '';
   if (stack.length > 0) {
     html = stackPanel(stack);
+  } else if (selectedWdMapTile) {
+    html = wardensDebtMapTilePanel(wdRuntime, selectedWdMapTile.id);
   } else if (selected) {
     html = objectPanel(selected.kind, selected.idx);
+  } else if (uiState.selectedCell) {
+    html = `<div class="sp-obj-header sp-obj-header--stack">
+            <div class="sp-type">Cell</div>
+            <div class="sp-name">${escHtml(Math.round(uiState.selectedCell.x) + ', ' + Math.round(uiState.selectedCell.y))}</div>
+            <div class="sp-meta-line">Square placement cell</div>
+          </div>`;
   } else {
     const { col, row } = selectedHex;
     html = `<div class="sp-type">Hex</div><div class="sp-name">${colLabel(col)}${row}</div>`;
@@ -1322,6 +1532,12 @@ function wardensDebtObjectPanel(kind, idx) {
   const { runtime, obj } = ctx;
   const isConvict = kind === 'wd-convict';
   const conditions = Array.isArray(obj.conditions) ? obj.conditions : [];
+  const position = wardensDebtFigurePosition(runtime, isConvict ? obj.id : obj.instanceId);
+  const positionLabel = position
+    ? `${position.x}, ${position.y}`
+    : 'Unplaced';
+  const locked = Boolean(position?.locked);
+  const angle = Number(position?.angle) || 0;
   const available = [...(runtime.index?.conditionTokensById?.keys() || [])]
     .filter(conditionId => !conditions.includes(conditionId));
 
@@ -1356,14 +1572,16 @@ function wardensDebtObjectPanel(kind, idx) {
 
   const hpValue = isConvict ? Number(obj.health) || 0 : Number(obj.currentHealth) || 0;
   const extraTiles = isConvict
-    ? [
+      ? [
         readOnlyCounter('Guard', Number(obj.guards) || 0, '#6b7da8'),
         readOnlyCounter('Resources', Number(obj.resources) || 0, '#9a7f5e'),
         readOnlyCounter('Hand', Array.isArray(obj.hand) ? obj.hand.length : 0, '#4a55b0'),
+        readOnlyCounter('Position', escHtml(positionLabel), '#507766'),
       ].join('')
     : [
         readOnlyCounter('Attack', Number(obj.attack) || 0, '#8f4c38'),
         readOnlyCounter('Zone', escHtml(obj.zone || 'board'), '#3d3d5c'),
+        readOnlyCounter('Position', escHtml(positionLabel), '#507766'),
       ].join('');
 
   return `
@@ -1374,7 +1592,16 @@ function wardensDebtObjectPanel(kind, idx) {
           <div class="sp-type">${isConvict ? 'Convict' : 'Monster'}</div>
         </div>
         <div class="sp-name">${escHtml(obj.name || (isConvict ? `Convict ${idx + 1}` : `Monster ${idx + 1}`))}</div>
-        <div class="sp-meta-line">${escHtml(isConvict ? obj.convictDefId : obj.monsterCardId)}</div>
+        <div class="sp-meta-line">${escHtml(isConvict ? obj.convictDefId : obj.monsterCardId)}${angle ? ` · ${angle}°` : ''}</div>
+      </div>
+    </div>
+    <div class="sp-action-section">
+      <div class="sp-subhead">Object</div>
+      <div class="sp-toolbar">
+        <button class="sp-icon-btn" data-action="rotate-ccw" ${locked ? 'disabled' : ''} title="Rotate CCW">&#8634;</button>
+        <button class="sp-icon-btn" data-action="rotate-cw" ${locked ? 'disabled' : ''} title="Rotate CW">&#8635;</button>
+        <button class="sp-icon-btn${locked ? ' is-locked' : ''}" data-action="toggle-lock" title="${locked ? 'Unlock' : 'Lock'}">${locked ? '&#128274;' : '&#128275;'}</button>
+        <button class="sp-icon-btn sp-icon-btn--danger" data-action="remove" title="Remove" ${locked ? 'disabled' : ''}>&#215;</button>
       </div>
     </div>
     <div class="sp-stats sp-stats--monster">
@@ -1397,6 +1624,80 @@ function wardensDebtObjectPanel(kind, idx) {
         ` : ''}
       </div>
     </div>
+  `;
+}
+
+function wardensDebtMapTilePanel(runtime, tileId) {
+  if (runtime.status !== 'ready' || !runtime.gameState) {
+    return hint('Wardens Debt runtime unavailable');
+  }
+
+  const mapTile = (runtime.gameState.board?.mapTiles || []).find(tile => tile.id === tileId) || null;
+  if (!mapTile) return hint('Map tile unavailable');
+  const locked = Boolean(mapTile.locked);
+
+  return `
+    <button class="sp-panel-back" data-action="wd-show-roster">&#8592; Roster</button>
+    <div class="sp-obj-header sp-obj-header--selected">
+      <div class="sp-obj-info">
+        <div class="sp-title-row">
+          <div class="sp-type">Maptile</div>
+        </div>
+        <div class="sp-name">${escHtml(mapTile.id)}</div>
+        <div class="sp-meta-line">${escHtml(`${Math.round(mapTile.x)}, ${Math.round(mapTile.y)}`)}</div>
+      </div>
+    </div>
+    <div class="sp-stats sp-stats--monster">
+      <div class="sp-subhead">Placement</div>
+      <div class="sp-meta-line">Drag the tile on the map to reposition it.</div>
+      <div class="sp-subhead">Object</div>
+      <div class="sp-toolbar">
+        <button class="sp-icon-btn" data-action="wd-rotate-ccw" ${locked ? 'disabled' : ''} title="Rotate CCW">&#8634;</button>
+        <button class="sp-icon-btn" data-action="wd-rotate-cw" ${locked ? 'disabled' : ''} title="Rotate CW">&#8635;</button>
+        <button class="sp-icon-btn${locked ? ' is-locked' : ''}" data-action="wd-toggle-lock" title="${locked ? 'Unlock' : 'Lock'}">${locked ? '&#128274;' : '&#128275;'}</button>
+        <button class="sp-icon-btn sp-icon-btn--danger" data-action="wd-remove-maptile" title="Remove" ${locked ? 'disabled' : ''}>&#215;</button>
+      </div>
+    </div>
+  `;
+}
+
+function wdAddPanel() {
+  const runtime = getWardensDebtRuntime();
+  const cellSelection = uiState.selectedCell;
+  const cellLabel = cellSelection
+    ? `${Math.round(cellSelection.x)}, ${Math.round(cellSelection.y)}`
+    : 'Select a cell first';
+  const placement = cellSelection
+    ? { x: Math.round(cellSelection.x), y: Math.round(cellSelection.y) }
+    : null;
+
+  if (runtime.status !== 'ready' || !runtime.gameState) {
+    return hint('Wardens Debt runtime unavailable');
+  }
+
+  return `
+    <div class="sp-add-header">
+      <button class="sp-panel-back" data-action="close-add">&#8592;</button>
+      <span class="sp-add-title">WD Pieces</span>
+    </div>
+    <div class="sp-obj-header sp-obj-header--stack">
+      <div class="sp-type">Wardens Debt</div>
+      <div class="sp-name">${escHtml(cellLabel)}</div>
+      <div class="sp-meta-line">${placement ? escHtml(`${placement.x}, ${placement.y}`) : 'Click a cell on the map to place pieces there.'}</div>
+    </div>
+    <div class="sp-subhead">Placeholders</div>
+    <div class="sp-wd-condition-picker">
+      <button class="sp-wd-condition-pick" data-action="wd-add-maptile">
+        Add Maptile
+      </button>
+      <button class="sp-wd-condition-pick" data-action="wd-add-figure" data-figure-kind="convict" ${placement ? '' : 'disabled'}>
+        Add Convict
+      </button>
+      <button class="sp-wd-condition-pick" data-action="wd-add-figure" data-figure-kind="enemy" ${placement ? '' : 'disabled'}>
+        Add Enemy
+      </button>
+    </div>
+    <div class="sp-meta-line">These are test pieces only. They are added to the selected cell.</div>
   `;
 }
 
@@ -1450,6 +1751,10 @@ function recentItems() {
 }
 
 function addPanel() {
+  const runtime = getWardensDebtRuntime();
+  if (runtime.status === 'ready' && runtime.gameState) {
+    return wdAddPanel();
+  }
   const hex    = uiState.selectedHex;
   const coord  = hex ? colLabel(hex.col) + hex.row : '';
   const search = uiState.addPanelSearch;

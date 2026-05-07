@@ -1,4 +1,6 @@
 export const WARDENS_DEBT_CONTENT_SCHEMA_VERSION = '0.5.0';
+import { wardensDebtMapTileForId } from './mapTiles.js';
+
 export const WARDENS_DEBT_STATE_VERSION = '0.2.0';
 
 const DECK_KINDS = new Set(['common-skill', 'monster', 'event', 'item', 'location', 'agenda', 'mission']);
@@ -57,6 +59,60 @@ function validateStringArray(values, path, issues) {
   });
 
   return true;
+}
+
+function validatePointMap(values, path, issues) {
+  if (!isPlainObject(values)) {
+    pushIssue(issues, path, 'must be an object');
+    return false;
+  }
+
+  Object.entries(values).forEach(([key, value]) => {
+    const itemPath = `${path}.${key}`;
+    if (!isPlainObject(value)) {
+      pushIssue(issues, itemPath, 'must be an object');
+      return;
+    }
+    if (!isNonNegativeInteger(value.x)) pushIssue(issues, `${itemPath}.x`, 'must be a non-negative integer');
+    if (!isNonNegativeInteger(value.y)) pushIssue(issues, `${itemPath}.y`, 'must be a non-negative integer');
+  });
+
+  return true;
+}
+
+function validateMapTiles(values, path, issues, contentIndex) {
+  if (!Array.isArray(values)) {
+    pushIssue(issues, path, 'must be an array');
+    return false;
+  }
+
+  values.forEach((tile, index) => {
+    const tilePath = `${path}[${index}]`;
+    if (!isPlainObject(tile)) {
+      pushIssue(issues, tilePath, 'must be an object');
+      return;
+    }
+    if (!isNonEmptyString(tile.id)) pushIssue(issues, `${tilePath}.id`, 'must be a non-empty string');
+    else if (contentIndex && !contentIndex.mapTilesById.has(tile.id)) pushIssue(issues, `${tilePath}.id`, `references unknown map tile "${tile.id}"`);
+    if (!isNonNegativeInteger(tile.x)) pushIssue(issues, `${tilePath}.x`, 'must be a non-negative integer');
+    if (!isNonNegativeInteger(tile.y)) pushIssue(issues, `${tilePath}.y`, 'must be a non-negative integer');
+  });
+
+  return true;
+}
+
+function defaultWardensDebtPoint(tile, index, kind, total) {
+  const width = tile?.naturalWidth || 1000;
+  const height = tile?.naturalHeight || 1000;
+  const step = Math.max(48, Math.floor(height / Math.max(3, total + 2)));
+  const centerX = kind === 'enemy' ? width * 0.62 : width * 0.38;
+  const baseY = kind === 'enemy' ? height * 0.18 : height * 0.82;
+  const direction = kind === 'enemy' ? 1 : -1;
+  const offset = Math.min(index, 4) * step;
+  return {
+    x: Math.max(0, Math.min(width, Math.round(centerX + (index % 2 === 0 ? -32 : 32)))),
+    y: Math.max(0, Math.min(height, Math.round(baseY + direction * offset))),
+  };
 }
 
 function validateUniqueIds(items, path, issues) {
@@ -614,6 +670,10 @@ export function createWardensDebtGameState(content, scenarioId) {
   const activeLocationCard = scenario.setup.startingLocationCardId
     ? index.locationCardsById.get(scenario.setup.startingLocationCardId)
     : null;
+  const activeMapTile = activeLocationCard?.mapTileIds?.length
+    ? wardensDebtMapTileForId(activeLocationCard.mapTileIds[0])
+    : null;
+  const mapTileId = activeLocationCard?.mapTileIds?.[0] || null;
 
   const enemies = (activeLocationCard?.monsterCardIds || []).map((monsterCardId, enemyIndex) => {
     const monsterCard = index.monsterCardsById.get(monsterCardId);
@@ -665,6 +725,19 @@ export function createWardensDebtGameState(content, scenarioId) {
     board: {
       locationCardId: activeLocationCard?.id || null,
       mapTileIds: activeLocationCard ? [...activeLocationCard.mapTileIds] : [],
+      mapTiles: mapTileId
+        ? [{ id: mapTileId, x: activeMapTile?.x ?? 240, y: activeMapTile?.y ?? 80, angle: 0, locked: false }]
+        : [],
+      figurePositions: Object.fromEntries([
+        ...convicts.map((convict, index) => {
+          const point = defaultWardensDebtPoint(activeMapTile, index, 'convict', convicts.length);
+          return [convict.id, activeMapTile ? { x: (activeMapTile.x || 0) + point.x, y: (activeMapTile.y || 0) + point.y } : point];
+        }),
+        ...enemies.map((enemy, index) => {
+          const point = defaultWardensDebtPoint(activeMapTile, index, 'enemy', enemies.length);
+          return [enemy.instanceId, activeMapTile ? { x: (activeMapTile.x || 0) + point.x, y: (activeMapTile.y || 0) + point.y } : point];
+        }),
+      ]),
     },
     zones: {
       board: [...enemies.map(enemy => enemy.instanceId)],
@@ -825,6 +898,14 @@ export function validateWardensDebtGameState(gameState, contentIndex) {
   }
 
   if (!validateStringArray(gameState.board.mapTileIds, 'board.mapTileIds', issues)) {
+    return { ok: false, issues };
+  }
+
+  if (!validateMapTiles(gameState.board.mapTiles, 'board.mapTiles', issues, contentIndex)) {
+    return { ok: false, issues };
+  }
+
+  if (gameState.board.figurePositions != null && !validatePointMap(gameState.board.figurePositions, 'board.figurePositions', issues)) {
     return { ok: false, issues };
   }
 

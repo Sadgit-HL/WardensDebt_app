@@ -1,0 +1,2 @@
+id,name,health,attack,text,tags,effects
+monster-collector,Placeholder Collector,6,2,A basic enemy template for testing.,"monster,basic,print,component:card,print-group:monster-cards","[{""type"":""deal_damage"",""target"":""convict"",""amount"":2}]"

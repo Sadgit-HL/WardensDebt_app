@@ -3,8 +3,10 @@
 import { hexCenter, imagePos, buildGridPath, colLabel, footprintHexes, COLS, ROWS, HEX_W, HEX_H } from './hex.js';
 import { assetPath, TILES, OVERLAY_OBJECTS, MONSTERS, MERCENARIES, SUMMONS } from './data.js';
 import { state } from './state.js';
-import { uiState } from './uiState.js';
+import { uiState, selectWardensDebtCell, selectFromStack } from './uiState.js';
 import { displayCurrentHp, displayMaxHp } from './hp.js';
+import { getWardensDebtRuntime } from './wardensDebt/runtime.js';
+import { wardensDebtFigurePosition, wardensDebtPrimaryMapTile } from './wardensDebt/placement.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -512,16 +514,189 @@ function anchorMarker(col, row) {
 // ─── Render from state ────────────────────────────────────────────────────────
 
 export function renderAll(state) {
+  const wdRuntime = getWardensDebtRuntime();
+  if (layerGrid) layerGrid.style.display = wdRuntime.status === 'ready' ? 'none' : '';
   clearLayer(layerTiles);
   clearLayer(layerOverlays);
   clearLayer(layerFigures);
 
   renderTiles(state.tiles);
+  renderWardensDebtMap();
   renderOverlays(state.overlays);
   renderMonsters(state.monsters);
   renderMercenaries(state.mercenaries);
   renderSummons(state.summons);
   renderSelection();
+}
+
+function renderWdFigureMarker(parent, { x, y, label, kind, angle = 0, locked = false }) {
+  const color = kind === 'enemy' ? '#e35f5f' : '#72ab84';
+  const group = document.createElementNS(SVG_NS, 'g');
+  group.setAttribute('transform', `rotate(${Number(angle) || 0} ${x} ${y})`);
+  group.setAttribute('opacity', locked ? '0.72' : '1');
+  parent.appendChild(group);
+
+  const ring = document.createElementNS(SVG_NS, 'circle');
+  ring.setAttribute('cx', x);
+  ring.setAttribute('cy', y);
+  ring.setAttribute('r', 15);
+  ring.setAttribute('fill', 'rgba(10,10,30,0.84)');
+  ring.setAttribute('stroke', color);
+  ring.setAttribute('stroke-width', '3');
+  group.appendChild(ring);
+
+  const pointer = document.createElementNS(SVG_NS, 'path');
+  pointer.setAttribute('d', `M${x},${y - 13}L${x + 4},${y - 6}L${x - 4},${y - 6}Z`);
+  pointer.setAttribute('fill', color);
+  pointer.setAttribute('opacity', '0.95');
+  group.appendChild(pointer);
+
+  appendSvgText(group, {
+    text: label,
+    x,
+    y: y + 1,
+    className: 'wd-figure-label',
+    fill: 'rgba(255,255,255,0.94)',
+    fontSize: 11,
+  });
+}
+
+function appendSvgText(parent, { text, x, y, className, fill = 'rgba(255,255,255,0.88)', fontSize = 13 }) {
+  const node = document.createElementNS(SVG_NS, 'text');
+  node.setAttribute('x', x);
+  node.setAttribute('y', y);
+  node.setAttribute('text-anchor', 'middle');
+  node.setAttribute('dominant-baseline', 'middle');
+  node.setAttribute('font-family', 'sans-serif');
+  node.setAttribute('font-size', fontSize);
+  node.setAttribute('font-weight', '800');
+  node.setAttribute('fill', fill);
+  node.setAttribute('paint-order', 'stroke');
+  node.setAttribute('stroke', 'rgba(0,0,0,0.72)');
+  node.setAttribute('stroke-width', '3');
+  node.setAttribute('class', className);
+  node.textContent = text;
+  parent.appendChild(node);
+}
+
+function renderWardensDebtMap() {
+  const runtime = getWardensDebtRuntime();
+  if (runtime.status !== 'ready' || !runtime.gameState || !runtime.index) return;
+
+  const firstMapTile = wardensDebtPrimaryMapTile(runtime);
+  if (!firstMapTile) return;
+
+  const group = document.createElementNS(SVG_NS, 'g');
+  group.setAttribute('class', 'wd-map');
+
+  const tileMarker = document.createElementNS(SVG_NS, 'g');
+  tileMarker.setAttribute('class', 'wd-maptile');
+  tileMarker.dataset.wdKind = 'maptile';
+  tileMarker.dataset.wdId = firstMapTile.id;
+  tileMarker.dataset.wdIdx = '0';
+  tileMarker.setAttribute('transform', `rotate(${Number(firstMapTile.angle) || 0} ${firstMapTile.x + firstMapTile.width / 2} ${firstMapTile.y + (firstMapTile.width * firstMapTile.naturalHeight / firstMapTile.naturalWidth) / 2})`);
+
+  const image = document.createElementNS(SVG_NS, 'image');
+  image.setAttribute('href', firstMapTile.image);
+  image.setAttribute('x', firstMapTile.x);
+  image.setAttribute('y', firstMapTile.y);
+  image.setAttribute('width', firstMapTile.width);
+  image.setAttribute('height', firstMapTile.width * firstMapTile.naturalHeight / firstMapTile.naturalWidth);
+  image.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  image.setAttribute('pointer-events', 'none');
+  tileMarker.appendChild(image);
+
+  const tileOutline = document.createElementNS(SVG_NS, 'rect');
+  tileOutline.setAttribute('x', firstMapTile.x);
+  tileOutline.setAttribute('y', firstMapTile.y);
+  tileOutline.setAttribute('width', firstMapTile.width);
+  tileOutline.setAttribute('height', firstMapTile.width * firstMapTile.naturalHeight / firstMapTile.naturalWidth);
+  tileOutline.setAttribute('fill', 'none');
+  tileOutline.setAttribute('stroke', 'rgba(255,255,255,0.15)');
+  tileOutline.setAttribute('stroke-width', '2');
+  tileOutline.setAttribute('pointer-events', 'none');
+  tileMarker.appendChild(tileOutline);
+
+  const tileHandle = document.createElementNS(SVG_NS, 'circle');
+  tileHandle.setAttribute('class', 'wd-maptile-handle');
+  tileHandle.setAttribute('cx', firstMapTile.x + 16);
+  tileHandle.setAttribute('cy', firstMapTile.y + 16);
+  tileHandle.setAttribute('r', 10);
+  tileHandle.setAttribute('fill', 'rgba(0,0,0,0.4)');
+  tileHandle.setAttribute('stroke', 'rgba(255,255,255,0.35)');
+  tileHandle.setAttribute('stroke-width', '2');
+  tileHandle.setAttribute('pointer-events', 'all');
+  tileHandle.style.cursor = firstMapTile.locked ? 'pointer' : 'move';
+  tileMarker.appendChild(tileHandle);
+
+  group.appendChild(tileMarker);
+
+  const selectedCell = uiState.selectedCell;
+  const cellSize = (firstMapTile.width / firstMapTile.naturalWidth) * 32;
+  if (selectedCell) {
+    const highlight = document.createElementNS(SVG_NS, 'rect');
+    highlight.setAttribute('x', selectedCell.x - cellSize / 2);
+    highlight.setAttribute('y', selectedCell.y - cellSize / 2);
+    highlight.setAttribute('width', cellSize);
+    highlight.setAttribute('height', cellSize);
+    highlight.setAttribute('fill', 'rgba(114,171,132,0.08)');
+    highlight.setAttribute('stroke', 'rgba(114,171,132,0.9)');
+    highlight.setAttribute('stroke-width', '2');
+    highlight.setAttribute('pointer-events', 'none');
+    group.appendChild(highlight);
+  }
+
+  const figures = [
+    ...(runtime.gameState.convicts || []).map((convict, index) => ({
+      id: convict.id,
+      label: `C${index + 1}`,
+      kind: 'convict',
+    })),
+    ...(runtime.gameState.enemies || []).map((enemy, index) => ({
+      id: enemy.instanceId,
+      label: `E${index + 1}`,
+      kind: 'enemy',
+    })),
+  ];
+
+  figures.forEach(figure => {
+    const position = wardensDebtFigurePosition(runtime, figure.id);
+    if (!position) return;
+    const figureKind = figure.kind === 'convict' ? 'convict' : 'enemy';
+    const figureIsSelected = uiState.selected?.kind === (figure.kind === 'convict' ? 'wd-convict' : 'wd-enemy')
+      && uiState.selected?.idx === (figure.kind === 'convict'
+        ? (runtime.gameState.convicts || []).findIndex(convict => convict.id === figure.id)
+        : (runtime.gameState.enemies || []).findIndex(enemy => enemy.instanceId === figure.id));
+    const marker = document.createElementNS(SVG_NS, 'g');
+    marker.setAttribute('class', `wd-figure${figureIsSelected ? ' is-selected' : ''}`);
+    marker.style.cursor = 'pointer';
+    marker.dataset.wdKind = figure.kind;
+    marker.dataset.wdId = figure.id;
+    marker.dataset.wdIdx = figure.kind === 'convict'
+      ? String((runtime.gameState.convicts || []).findIndex(convict => convict.id === figure.id))
+      : String((runtime.gameState.enemies || []).findIndex(enemy => enemy.instanceId === figure.id));
+    renderWdFigureMarker(marker, {
+      x: position.x,
+      y: position.y,
+      label: figure.label,
+      kind: figureKind,
+      angle: Number(position.angle) || 0,
+      locked: Boolean(position.locked),
+    });
+    if (figureIsSelected) {
+      const ring = document.createElementNS(SVG_NS, 'circle');
+      ring.setAttribute('cx', position.x);
+      ring.setAttribute('cy', position.y);
+      ring.setAttribute('r', 20);
+      ring.setAttribute('fill', 'none');
+      ring.setAttribute('stroke', 'rgba(240,180,40,0.9)');
+      ring.setAttribute('stroke-width', '2');
+      marker.appendChild(ring);
+    }
+    group.appendChild(marker);
+  });
+
+  layerTiles.appendChild(group);
 }
 
 function renderTiles(tiles) {

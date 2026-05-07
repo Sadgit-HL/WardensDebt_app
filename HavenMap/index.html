@@ -25,7 +25,7 @@
     <header class="sidebar-brand">
       <div class="sidebar-brand-mark" aria-hidden="true">H</div>
       <div class="sidebar-brand-copy">
-        <h1>HavenMap</h1>
+        <h1>HavenMap-Test</h1>
         <div id="sidebar-game-name" class="sidebar-game-name"></div>
       </div>
     </header>
@@ -40,6 +40,12 @@
     </div>
   </div>
 
+
+  <div id="wd-topbar" aria-label="Wardens Debt status and shared decks">
+    <div id="wd-phase-strip"></div>
+    <div id="wd-shared-decks"></div>
+    <div id="wd-active-strip"></div>
+  </div>
 
   <!--
     Shown when ES modules are blocked (e.g. opened directly in Chrome/Edge via file://).
@@ -64,7 +70,7 @@
   </div>
 
   <!-- Element bar — bottom of viewport, left of sidebar -->
-  <div id="element-bar">
+  <div id="element-bar" class="is-compact">
     <div class="el-group el-group--tools">
       <div class="el-tool-cluster">
         <button id="undo-btn" title="Undo" aria-label="Undo" disabled>↶</button>
@@ -75,8 +81,10 @@
         <span id="zoom-label">100%</span>
         <button id="zoom-in">+</button>
       </div>
+      <div id="wd-dice-tray" class="el-tool-cluster wd-dice-tray"></div>
     </div>
     <div class="el-group el-group--play">
+      <button id="wd-playbar-toggle" class="wd-panel-toggle" type="button" data-wd-ui-action="toggle-playbar" aria-expanded="false">Player Board</button>
       <div id="wd-playbar"></div>
     </div>
   </div>

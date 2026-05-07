@@ -129,7 +129,7 @@ These parts are likely useful during migration:
 
 These are embedded in the current app and should be treated as migration targets, not Wardens Debt design decisions:
 
-- Hex-board spatial model.
+- Hex-board spatial model. Wardens Debt now uses board-space placement for figures and a handle-only tile interaction model; tile borders are not movement fences.
 - SVG rendering pipeline centered on map tiles and figures.
 - URL-hash save format as the primary persistence mechanism.
 - Domain arrays:
@@ -162,6 +162,14 @@ Confirmed baseline behavior from the current code/docs:
   - phase controls with automatic event draw in `event-phase`
   - queued `fast` and `slow` skill resolution by phase
 
+Current design decision for Wardens Debt maps:
+
+- Do not force Wardens Debt map tiles into HavenMap's hex grid.
+- A Wardens Debt map tile is currently treated as a composite board graphic with a selectable handle.
+- Runtime figure placement uses board-space coordinates in `board.figurePositions`.
+- Figures can cross tile borders on composite maps.
+- Future area-graph rules remain optional and should only be added if playtesting needs them.
+
 ## Recommended Migration Strategy
 
 The practical path forward is:
@@ -170,8 +178,9 @@ The practical path forward is:
 2. Decide the first external content source format.
 3. Build a validation/import layer for Wardens Debt content.
 4. Replace HavenMap-specific state shape with Wardens Debt entities.
-5. Reuse/adapt the existing editor and mobile interaction patterns around the new entities.
-6. Remove or replace hex/map/SVG assumptions only after the new playtest loop is clear.
+5. Add a Wardens Debt area-map layer only if playtesting later proves the need; do not block the current board-space model on it.
+6. Reuse/adapt the existing editor and mobile interaction patterns around the new entities.
+7. Remove or replace hex/map/SVG assumptions only after the new playtest loop is clear.
 
 In practice, the first concrete code task should probably be one of:
 
@@ -196,6 +205,7 @@ Use this sequence unless a later planning decision explicitly changes it:
 6. Reuse or adapt the existing sidebar, editor, and mobile-shell interaction patterns around the new state where they still fit.
 7. Remove HavenMap-specific assumptions deliberately rather than wrapping them forever:
    - hex and map assumptions
+   - tile-bound figure constraints
    - SVG board-centric rendering assumptions
    - HavenMap entity taxonomy
    - URL-hash persistence as the long-term save model

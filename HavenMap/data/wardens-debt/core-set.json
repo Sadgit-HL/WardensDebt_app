@@ -157,7 +157,7 @@
       "id": "common-brawler-protect",
       "name": "Placeholder Common Protect",
       "role": "common",
-      "timing": "slow",
+      "timing": "fast",
       "cost": 1,
       "text": "Gain 1 guard.",
       "tags": [
@@ -223,13 +223,35 @@
           "conditionId": "marked"
         }
       ]
+    },
+    {
+      "id": "common-TEST",
+      "name": "Placeholder Cunning test",
+      "role": "common",
+      "timing": "slow",
+      "cost": 1,
+      "text": "Apply Marked.",
+      "tags": [
+        "common",
+        "setup",
+        "print",
+        "component:card",
+        "print-group:common-skill-cards"
+      ],
+      "effects": [
+        {
+          "type": "apply_condition",
+          "target": "enemy",
+          "conditionId": "marked"
+        }
+      ]
     }
   ],
   "convictDefs": [
     {
       "id": "convict-a",
       "name": "Placeholder Convict A",
-      "health": 10,
+      "health": 12,
       "handSize": 8,
       "starterSkillCardIds": [
         "convict-a-starter-strike",
@@ -306,6 +328,24 @@
     },
     {
       "id": "event-lights-out",
+      "name": "Placeholder Lights Out",
+      "text": "A second placeholder event card for multi-convict event draws.",
+      "tags": [
+        "event",
+        "pressure",
+        "print",
+        "component:card",
+        "print-group:event-cards"
+      ],
+      "effects": [
+        {
+          "type": "roll_die",
+          "target": "self"
+        }
+      ]
+    },
+    {
+      "id": "event-TEST",
       "name": "Placeholder Lights Out",
       "text": "A second placeholder event card for multi-convict event draws.",
       "tags": [
@@ -478,7 +518,8 @@
       "kind": "common-skill",
       "cardIds": [
         "common-brawler-swing",
-        "common-brawler-protect"
+        "common-brawler-protect",
+        "common-TEST"
       ]
     },
     {

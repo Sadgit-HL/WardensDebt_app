@@ -14,6 +14,10 @@ const DEFAULT_WORKBOOK_PATH = path.resolve(
   __dirname,
   '../../data/wardens-debt/sheets/workbook.json'
 );
+const DEFAULT_PUBLISHED_CONFIG_PATH = path.resolve(
+  __dirname,
+  '../../data/wardens-debt/sheets/published-sheet.json'
+);
 const DEFAULT_OUTPUT_PATH = path.resolve(
   __dirname,
   '../../data/wardens-debt/core-set.json'
@@ -38,7 +42,9 @@ const TAB_NAMES = [
 function parseArgs(argv) {
   const args = {
     input: DEFAULT_WORKBOOK_PATH,
+    publishedConfig: DEFAULT_PUBLISHED_CONFIG_PATH,
     output: DEFAULT_OUTPUT_PATH,
+    source: 'file',
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -47,10 +53,144 @@ function parseArgs(argv) {
       args.input = path.resolve(argv[++i]);
     } else if (arg === '--output') {
       args.output = path.resolve(argv[++i]);
+    } else if (arg === '--published-config') {
+      args.publishedConfig = path.resolve(argv[++i]);
+    } else if (arg === '--published') {
+      args.source = 'published';
     }
   }
 
   return args;
+}
+
+function parseCsvLine(line) {
+  const values = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+
+    if (char === '"') {
+      const nextChar = line[index + 1];
+      if (inQuotes && nextChar === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      values.push(current);
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  values.push(current);
+  return values;
+}
+
+function parseCsv(text) {
+  const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const rows = [];
+  let currentLine = '';
+  let inQuotes = false;
+
+  for (let index = 0; index < normalized.length; index += 1) {
+    const char = normalized[index];
+    if (char === '"') {
+      const nextChar = normalized[index + 1];
+      if (inQuotes && nextChar === '"') {
+        currentLine += '""';
+        index += 1;
+        continue;
+      }
+      inQuotes = !inQuotes;
+      currentLine += char;
+      continue;
+    }
+
+    if (char === '\n' && !inQuotes) {
+      rows.push(parseCsvLine(currentLine));
+      currentLine = '';
+      continue;
+    }
+
+    currentLine += char;
+  }
+
+  if (currentLine.length > 0) {
+    rows.push(parseCsvLine(currentLine));
+  }
+
+  return rows.filter(row => row.some(cell => String(cell).trim().length > 0));
+}
+
+function csvRowsToObjects(rows, tabName) {
+  if (rows.length === 0) return [];
+  const [headers, ...dataRows] = rows;
+  const normalizedHeaders = headers.map(header => String(header).trim());
+
+  if (normalizedHeaders.some(header => !header)) {
+    throw new Error(`Published sheet tab "${tabName}" has an empty header cell`);
+  }
+
+  return dataRows.map(row => {
+    const record = {};
+    normalizedHeaders.forEach((header, index) => {
+      record[header] = row[index] ?? '';
+    });
+    return record;
+  });
+}
+
+function buildPublishedCsvUrl(spreadsheetId, gid) {
+  return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(spreadsheetId)}/export?format=csv&gid=${encodeURIComponent(gid)}`;
+}
+
+async function loadPublishedWorkbook(configPath) {
+  const configRaw = await fs.readFile(configPath, 'utf8');
+  const config = JSON.parse(configRaw);
+  const spreadsheetId = asNonEmptyString(config.spreadsheetId);
+
+  if (!spreadsheetId) {
+    throw new Error(`Published sheet config "${configPath}" must include a non-empty "spreadsheetId"`);
+  }
+
+  if (!config.tabs || typeof config.tabs !== 'object' || Array.isArray(config.tabs)) {
+    throw new Error(`Published sheet config "${configPath}" must include a "tabs" object`);
+  }
+
+  const workbook = {
+    meta: {
+      schemaVersion: config.meta?.schemaVersion || WARDENS_DEBT_CONTENT_SCHEMA_VERSION,
+      gameId: config.meta?.gameId || 'wardens-debt',
+      contentVersion: config.meta?.contentVersion || 'prototype-core-set',
+    },
+  };
+
+  for (const tabName of TAB_NAMES) {
+    const gid = asNonEmptyString(config.tabs[tabName]);
+    if (!gid) {
+      throw new Error(`Published sheet config "${configPath}" is missing a gid for tab "${tabName}"`);
+    }
+
+    const url = buildPublishedCsvUrl(spreadsheetId, gid);
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Could not load published sheet tab "${tabName}" from ${url}: ${response.status}`);
+    }
+
+    const csv = await response.text();
+    workbook[tabName] = csvRowsToObjects(parseCsv(csv), tabName);
+  }
+
+  return workbook;
 }
 
 function asNonEmptyString(value) {
@@ -125,6 +265,7 @@ function mapSkillCardRow(row) {
     id: String(row.id).trim(),
     name: String(row.name).trim(),
     role: String(row.role).trim(),
+    timing: String(row.timing).trim(),
     convictDefId: asNonEmptyString(row.convictDefId ?? row.convictId),
     cost: parseInteger(row.cost, 0),
     text: String(row.text).trim(),
@@ -257,9 +398,11 @@ function buildContent(workbook) {
 }
 
 async function main() {
-  const { input, output } = parseArgs(process.argv.slice(2));
-  const workbookRaw = await fs.readFile(input, 'utf8');
-  const workbook = JSON.parse(workbookRaw);
+  const { input, output, publishedConfig, source } = parseArgs(process.argv.slice(2));
+  const workbook =
+    source === 'published'
+      ? await loadPublishedWorkbook(publishedConfig)
+      : JSON.parse(await fs.readFile(input, 'utf8'));
 
   for (const tabName of TAB_NAMES) {
     requireArrayTab(workbook, tabName);
@@ -274,7 +417,11 @@ async function main() {
   await fs.mkdir(path.dirname(output), { recursive: true });
   await fs.writeFile(output, `${JSON.stringify(content, null, 2)}\n`, 'utf8');
 
-  console.log(`Imported workbook ${input}`);
+  if (source === 'published') {
+    console.log(`Imported published sheet workbook using ${publishedConfig}`);
+  } else {
+    console.log(`Imported workbook ${input}`);
+  }
   console.log(`Generated content ${output}`);
 }
 

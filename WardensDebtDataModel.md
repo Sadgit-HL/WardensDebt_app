@@ -206,9 +206,41 @@ Map tiles are reusable board pieces:
   id: 'tile-cell-a',
   name: 'Placeholder Cell Tile',
   layoutKey: 'cell-a',
+  areas: [],
   tags: ['tile', 'room', 'print', 'component:board', 'print-group:map-tiles']
 }
 ```
+
+#### Wardens Debt Area Maps
+
+Wardens Debt map tiles should not inherit HavenMap's hex-grid positioning model.
+
+For Wardens Debt, a map tile is a graphical board component. The current prototype keeps figure placement in **board-space coordinates**, not hex coordinates, and figures are allowed to cross tile borders on composite maps. Exact position inside a tile is mostly a UI/layout concern; rules should still stay manual unless a later area-graph model is intentionally added.
+
+Rules should not rely on tile boundaries for movement or placement.
+
+Recommended map tile shape for the current prototype:
+
+```js
+{
+  id: 'tile-cell-a',
+  name: 'Placeholder Cell Tile',
+  image: 'cell-a.png',
+  x: 240,
+  y: 80,
+  angle: 0,
+  locked: false,
+  tags: ['tile', 'room', 'print', 'component:board', 'print-group:map-tiles']
+}
+```
+
+Implementation policy:
+
+- Do not force Wardens Debt back into HavenMap hex coordinates.
+- Keep tile artwork selectable through a small handle, not the whole artwork.
+- Keep figure movement in board-space coordinates so pieces can cross composite-tile borders.
+- Leave any future area graph as an optional rules layer, not a requirement for the current playtest loop.
+- Polygon geometry can still be added later if a rules-driven area system becomes useful.
 
 ### Decks
 
@@ -341,9 +373,23 @@ Board state tracks the active location and the tiles it references.
 ```js
 {
   locationCardId: 'location-cell-block-a',
-  mapTileIds: ['tile-cell-a', 'tile-hall-a']
+  mapTileIds: ['tile-cell-a', 'tile-hall-a'],
+  figurePositions: {
+    'convict-1': { x: 256, y: 224 },
+    'enemy-1': { x: 448, y: 224 }
+  }
 }
 ```
+
+Wardens Debt board state should track **board-space positions** rather than exact hex position.
+
+Recommended runtime helpers:
+
+- `snapWardensDebtBoardPoint(point)`
+- `wardensDebtFigurePosition(figureId, runtime)`
+- `wardensDebtPrimaryMapTile(runtime)` for tile placement only
+
+If a future area-map layer becomes useful for playtesting, keep it separate from the current figure-position model.
 
 ## Why This Shape
 

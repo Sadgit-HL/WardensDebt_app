@@ -218,6 +218,32 @@ If you mean Wardens Debt runtime:
 - enemy HP is `currentHealth`
 - both use `maxHealth`
 
+### Wardens Debt area maps versus HavenMap hexes
+
+HavenMap board state is currently hex-position based. Wardens Debt does not use that rules model.
+
+The current Wardens Debt prototype uses **board-space coordinates** for figures and a selectable maptile handle for tile placement. Figures can cross tile borders on composite maps, so tile boundaries should not be treated as movement fences.
+
+Use board-space language for Wardens Debt requests:
+
+- "Move `enemy-1` to board point `512, 384`"
+- "Let the figure cross the border between map tiles"
+- "Select the tile by its handle, not by the whole artwork"
+
+Avoid hex language for Wardens Debt rules:
+
+- "Move this enemy to hex 4,7"
+- "Attack a target within 3 hexes"
+- "Snap the convict to the hex grid"
+
+Current Wardens Debt runtime concept:
+
+- `board.figurePositions[figureId] = { x, y }`
+- figures are UI-snapped to board/grid points only
+- tile selection uses `selectedWdMapTile`
+
+Future area-graph concepts can still be introduced later if the design needs them, but they are not part of the current playtest model.
+
 ## 2. Wardens Debt Content
 
 Plain meaning:
@@ -321,6 +347,7 @@ Important values:
 - `id`
 - `name`
 - `layoutKey`
+- optional `areas`
 - `tags`
 
 `deck`:
@@ -574,6 +601,7 @@ Each queued skill object contains:
 
 - `locationCardId`
 - `mapTileIds`
+- `figurePositions`
 
 `zones` contains:
 
@@ -583,6 +611,8 @@ Each queued skill object contains:
 - `banished`
 
 These zone arrays hold **enemy `instanceId` values**, not monster card ids.
+
+For Wardens Debt playtesting, prefer board-space `x/y` placement over HavenMap `x/y` hex coordinates. The tile body is passive; use `selectedWdMapTile` for the small handle-only tile affordance.
 
 ## 4. UI Selection Terms
 

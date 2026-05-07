@@ -9,7 +9,7 @@ Use this when writing requests for changes.
 Use this when you mean:
 
 - something placed on the map
-- a hex position
+- a HavenMap hex position, or a Wardens Debt named area
 - rotation
 - a door
 - a token
@@ -30,6 +30,7 @@ Typical words:
 Examples:
 
 - `In map layer, move the selected monster to C5.`
+- `In Wardens Debt session, move enemy-1 to area guard-post.`
 - `In map layer, set the selected monster role to elite.`
 - `In map layer, set the selected monster hp to 3.`
 - `In map layer, open the selected door.`
@@ -125,6 +126,8 @@ If you mean:
 - "max HP in WD session" -> `maxHealth`
 - "door open/closed" -> `opened`
 - "normal/elite/boss" -> `role`
+- "WD figure location" -> board-space `x/y`, not a hex coordinate
+- "WD tile control point" -> the small handle in the top-left corner
 
 ## Good Request Formula
 
@@ -156,6 +159,10 @@ Prefer these terms:
 - `drawPile`
 - `discardPile`
 - `activeCards`
+- `x`
+- `y`
+- `selectedWdMapTile`
+- `figurePositions`
 - `print`
 - `component:card`
 - `component:token`

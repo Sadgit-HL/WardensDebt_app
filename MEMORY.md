@@ -27,6 +27,7 @@
 - Recommended early content workflow: `Google Sheets -> JSON export -> validated data objects -> app UI/engine`.
 - Recommended longer-term workflow: `database/custom editor` once content volume and balancing needs justify it.
 - Card/effect data should use structured effect descriptors, not free-form executable code embedded in content rows.
+- Wardens Debt map movement should use board-space coordinates, not HavenMap hex coordinates. A WD map tile is a composite graphic; figure positions may cross tile borders and tile handles are the only intended hit target for tile manipulation.
 
 ## Existing Codebase Snapshot
 - `HavenMap` is a vanilla `HTML/CSS/JavaScript ES modules` app with no build step or framework.
@@ -50,10 +51,12 @@
 
 ## Things That Should Not Be Carried Over Uncritically
 - Hex-grid assumptions.
+- Hex-grid assumptions are especially wrong for Wardens Debt map tiles: use board-space placement and avoid binding figures to a single tile's bounds or hex coordinates.
 - URL-hash serialization as the long-term save system.
 - HavenMap object taxonomy: `tiles`, `overlays`, `monsters`, `mercenaries`, `summons`.
 - Gloomhaven/Frosthaven asset path rules and game switching model.
 - Domain-specific labels such as scenario level, standees, conditions, and elements unless Wardens Debt genuinely needs equivalents.
+- Wardens Debt tile handling is currently handle-only: select and manipulate the tile via the small top-left marker, not the whole artwork.
 
 ## Command/Environment Reminders
 - `start.bat` exists at the workspace root and is inherited from the HavenMap setup.
@@ -108,3 +111,8 @@
   - convict hand size is currently capped at `8`
 - Current implemented phase automation:
   - entering `event-phase` automatically draws one event card per convict into the active area
+- Current map-design decision:
+  - Wardens Debt uses board-space placement for figures and a selectable tile handle for tile manipulation
+  - map tiles are composite graphics; figure positions may cross tile borders
+  - board-space `x/y` is the current runtime model for figures
+  - area-map tracking is future-only and should not be assumed by current playtest code

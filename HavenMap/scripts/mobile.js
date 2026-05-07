@@ -6,6 +6,7 @@ import { ELEMENTS } from './games/common.js';
 import { TILES, OVERLAY_OBJECTS, MONSTERS, MERCENARIES, SUMMONS } from './data.js';
 import { colLabel } from './hex.js';
 import { displayCurrentHp } from './hp.js';
+import { ROTATION_STEP } from './rotation.js';
 
 const KIND_TABLE = {
   tile: TILES,
@@ -126,7 +127,7 @@ function applyObjectAction(action) {
   }
   if (obj.locked) return;
   if (action === 'rotate-ccw' || action === 'rotate-cw') {
-    const delta = action === 'rotate-cw' ? 60 : -60;
+    const delta = action === 'rotate-cw' ? ROTATION_STEP : -ROTATION_STEP;
     patch({ [key]: arr.map((item, i) => i === sel.idx ? { ...item, angle: ((Number(item.angle) || 0) + delta + 360) % 360 } : item) });
   } else if (action === 'toggle-role' && sel.kind === 'monster' && obj.role !== 'boss') {
     patch({ [key]: arr.map((item, i) => i === sel.idx ? {
