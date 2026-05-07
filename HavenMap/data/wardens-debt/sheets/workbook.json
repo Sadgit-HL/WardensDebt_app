@@ -1,0 +1,278 @@
+{
+  "meta": {
+    "schemaVersion": "0.4.0",
+    "gameId": "wardens-debt",
+    "contentVersion": "prototype-core-set"
+  },
+  "dice": [
+    {
+      "id": "d6-basic",
+      "name": "Basic D6",
+      "sides": "6"
+    }
+  ],
+  "conditionTokens": [
+    {
+      "id": "marked",
+      "name": "Marked",
+      "description": "The next precise hit gains bonus damage.",
+      "tags": "debuff"
+    },
+    {
+      "id": "guarded",
+      "name": "Guarded",
+      "description": "Reduce incoming damage by one until spent.",
+      "tags": "buff"
+    }
+  ],
+  "skillCards": [
+    {
+      "id": "convict-a-starter-strike",
+      "name": "Placeholder Starter Strike",
+      "role": "starter",
+      "convictId": "convict-a",
+      "cost": "0",
+      "text": "Deal 1 damage to an enemy.",
+      "tags": "starter,attack",
+      "effects": "[{\"type\":\"deal_damage\",\"target\":\"enemy\",\"amount\":1}]"
+    },
+    {
+      "id": "convict-a-starter-guard",
+      "name": "Placeholder Starter Guard",
+      "role": "starter",
+      "convictId": "convict-a",
+      "cost": "0",
+      "text": "Gain 1 guard.",
+      "tags": "starter,defense",
+      "effects": "[{\"type\":\"gain_guard\",\"target\":\"self\",\"amount\":1}]"
+    },
+    {
+      "id": "convict-b-starter-shot",
+      "name": "Placeholder Starter Shot",
+      "role": "starter",
+      "convictId": "convict-b",
+      "cost": "0",
+      "text": "Deal 1 damage and apply Marked.",
+      "tags": "starter,ranged",
+      "effects": "[{\"type\":\"deal_damage\",\"target\":\"enemy\",\"amount\":1},{\"type\":\"apply_condition\",\"target\":\"enemy\",\"conditionId\":\"marked\"}]"
+    },
+    {
+      "id": "convict-b-starter-focus",
+      "name": "Placeholder Starter Focus",
+      "role": "starter",
+      "convictId": "convict-b",
+      "cost": "0",
+      "text": "Draw 1 card.",
+      "tags": "starter,utility",
+      "effects": "[{\"type\":\"draw_cards\",\"target\":\"self\",\"count\":1}]"
+    },
+    {
+      "id": "common-brawler-swing",
+      "name": "Placeholder Common Swing",
+      "role": "common",
+      "cost": "1",
+      "text": "Deal 2 damage.",
+      "tags": "common,attack",
+      "effects": "[{\"type\":\"deal_damage\",\"target\":\"enemy\",\"amount\":2}]"
+    },
+    {
+      "id": "common-brawler-protect",
+      "name": "Placeholder Common Protect",
+      "role": "common",
+      "cost": "1",
+      "text": "Gain 1 guard.",
+      "tags": "common,defense",
+      "effects": "[{\"type\":\"gain_guard\",\"target\":\"self\",\"amount\":1}]"
+    },
+    {
+      "id": "common-cunning-bolt",
+      "name": "Placeholder Cunning Bolt",
+      "role": "common",
+      "cost": "1",
+      "text": "Deal 1 damage and roll a die.",
+      "tags": "common,precision",
+      "effects": "[{\"type\":\"deal_damage\",\"target\":\"enemy\",\"amount\":1},{\"type\":\"roll_die\",\"target\":\"self\",\"count\":1}]"
+    },
+    {
+      "id": "common-cunning-trick",
+      "name": "Placeholder Cunning Trick",
+      "role": "common",
+      "cost": "1",
+      "text": "Apply Marked.",
+      "tags": "common,setup",
+      "effects": "[{\"type\":\"apply_condition\",\"target\":\"enemy\",\"conditionId\":\"marked\"}]"
+    }
+  ],
+  "convictCards": [
+    {
+      "id": "convict-a",
+      "name": "Placeholder Convict A",
+      "health": "10",
+      "handSize": "3",
+      "starterSkillCardIds": "convict-a-starter-strike,convict-a-starter-guard",
+      "tags": "convict,frontline"
+    },
+    {
+      "id": "convict-b",
+      "name": "Placeholder Convict B",
+      "health": "8",
+      "handSize": "4",
+      "starterSkillCardIds": "convict-b-starter-shot,convict-b-starter-focus",
+      "tags": "convict,ranged"
+    }
+  ],
+  "monsterCards": [
+    {
+      "id": "monster-collector",
+      "name": "Placeholder Collector",
+      "health": "6",
+      "attack": "2",
+      "text": "A basic enemy template for testing.",
+      "tags": "monster,basic",
+      "effects": "[{\"type\":\"deal_damage\",\"target\":\"convict\",\"amount\":2}]"
+    }
+  ],
+  "eventCards": [
+    {
+      "id": "event-lockdown",
+      "name": "Placeholder Lockdown",
+      "text": "Apply Marked to the lead convict.",
+      "tags": "event,pressure",
+      "effects": "[{\"type\":\"apply_condition\",\"target\":\"convict\",\"conditionId\":\"marked\"}]"
+    }
+  ],
+  "itemCards": [
+    {
+      "id": "item-bandage",
+      "name": "Placeholder Bandage",
+      "cost": "1",
+      "text": "Heal 1.",
+      "tags": "item,healing",
+      "effects": "[{\"type\":\"heal\",\"target\":\"self\",\"amount\":1}]"
+    }
+  ],
+  "agendaCards": [
+    {
+      "id": "agenda-keep-moving",
+      "name": "Placeholder Agenda",
+      "text": "A placeholder agenda card for future progression rules.",
+      "tags": "agenda,placeholder",
+      "effects": "[{\"type\":\"draw_cards\",\"target\":\"self\",\"count\":1}]"
+    },
+    {
+      "id": "agenda-secure-route",
+      "name": "Placeholder Agenda Two",
+      "text": "A second agenda card to prove deterministic stack order.",
+      "tags": "agenda,placeholder",
+      "effects": "[{\"type\":\"gain_guard\",\"target\":\"self\",\"amount\":1}]"
+    }
+  ],
+  "missionCards": [
+    {
+      "id": "mission-breakout",
+      "name": "Placeholder Mission",
+      "text": "A placeholder mission card for scenario-level goals.",
+      "tags": "mission,placeholder",
+      "effects": "[{\"type\":\"gain_guard\",\"target\":\"self\",\"amount\":1}]"
+    },
+    {
+      "id": "mission-escape-route",
+      "name": "Placeholder Mission Two",
+      "text": "A second mission card to prove deterministic stack order.",
+      "tags": "mission,placeholder",
+      "effects": "[{\"type\":\"draw_cards\",\"target\":\"self\",\"count\":1}]"
+    }
+  ],
+  "locationCards": [
+    {
+      "id": "location-cell-block-a",
+      "name": "Placeholder Cell Block",
+      "mapTileIds": "tile-cell-a,tile-hall-a",
+      "monsterCardIds": "monster-collector",
+      "tags": "location,intro-room"
+    }
+  ],
+  "mapTiles": [
+    {
+      "id": "tile-cell-a",
+      "name": "Placeholder Cell Tile",
+      "layoutKey": "cell-a",
+      "tags": "tile,room"
+    },
+    {
+      "id": "tile-hall-a",
+      "name": "Placeholder Hall Tile",
+      "layoutKey": "hall-a",
+      "tags": "tile,hallway"
+    }
+  ],
+  "decks": [
+    {
+      "id": "common-skill-deck-a",
+      "name": "Placeholder Common Skill Deck A",
+      "kind": "common-skill",
+      "cardIds": "common-brawler-swing,common-brawler-protect"
+    },
+    {
+      "id": "common-skill-deck-b",
+      "name": "Placeholder Common Skill Deck B",
+      "kind": "common-skill",
+      "cardIds": "common-cunning-bolt,common-cunning-trick"
+    },
+    {
+      "id": "monster-deck-a",
+      "name": "Placeholder Monster Deck",
+      "kind": "monster",
+      "cardIds": "monster-collector"
+    },
+    {
+      "id": "event-deck-a",
+      "name": "Placeholder Event Deck",
+      "kind": "event",
+      "cardIds": "event-lockdown"
+    },
+    {
+      "id": "item-deck-a",
+      "name": "Placeholder Item Deck",
+      "kind": "item",
+      "cardIds": "item-bandage"
+    },
+    {
+      "id": "location-deck-a",
+      "name": "Placeholder Location Deck",
+      "kind": "location",
+      "cardIds": "location-cell-block-a"
+    },
+    {
+      "id": "agenda-deck-a",
+      "name": "Placeholder Agenda Stack",
+      "kind": "agenda",
+      "cardIds": "agenda-keep-moving,agenda-secure-route"
+    },
+    {
+      "id": "mission-deck-a",
+      "name": "Placeholder Mission Stack",
+      "kind": "mission",
+      "cardIds": "mission-breakout,mission-escape-route"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "breach-the-ledger-vault",
+      "name": "Placeholder Scenario One",
+      "playerSlots": "2",
+      "convictIds": "convict-a,convict-b",
+      "commonSkillDeckIds": "common-skill-deck-a,common-skill-deck-b",
+      "monsterDeckId": "monster-deck-a",
+      "eventDeckId": "event-deck-a",
+      "itemDeckId": "item-deck-a",
+      "locationDeckId": "location-deck-a",
+      "agendaDeckId": "agenda-deck-a",
+      "missionDeckId": "mission-deck-a",
+      "startingLocationCardId": "location-cell-block-a",
+      "diceIds": "d6-basic,d6-basic",
+      "conditionTokenIds": "marked,guarded",
+      "startingResources": "0"
+    }
+  ]
+}

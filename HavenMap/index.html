@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HavenMap</title>
+  <link rel="stylesheet" href="styles/main.css?v=mobile-3">
+</head>
+<body>
+
+  <!-- Main SVG canvas – the entire hex board lives here -->
+  <svg id="board-svg" xmlns="http://www.w3.org/2000/svg">
+    <g id="board-group">
+      <g id="layer-grid"></g>      <!-- hex grid lines + coordinate labels -->
+      <g id="layer-tiles"></g>     <!-- map tiles (bottom-most) -->
+      <g id="layer-overlays"></g>  <!-- overlay tiles, doors -->
+      <g id="layer-selection"></g> <!-- selected hex/object highlight -->
+      <g id="layer-figures"></g>   <!-- monsters, heroes, familiars, map tokens -->
+      <g id="layer-drag"></g>      <!-- drag highlight, drawn above everything -->
+    </g>
+  </svg>
+
+  <!-- Right sidebar – context-sensitive panel -->
+  <div id="sidebar">
+    <header class="sidebar-brand">
+      <div class="sidebar-brand-mark" aria-hidden="true">H</div>
+      <div class="sidebar-brand-copy">
+        <h1>HavenMap</h1>
+        <div id="sidebar-game-name" class="sidebar-game-name"></div>
+      </div>
+    </header>
+    <div id="sidebar-panel"></div>
+    <div id="sidebar-footer">
+      <div id="settings-panel"></div>
+      <button id="settings-btn" title="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+          <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.92c.04-.34.07-.69.07-1.08s-.03-.73-.07-1.08l2.33-1.82c.21-.16.27-.46.13-.7l-2.2-3.82c-.14-.24-.43-.32-.67-.24l-2.75 1.11c-.57-.44-1.18-.81-1.86-1.09L14.11 2.1c-.04-.27-.27-.47-.54-.47h-4.4c-.27 0-.5.2-.54.47l-.41 2.76c-.68.28-1.29.65-1.86 1.09L3.62 4.84c-.24-.08-.53 0-.67.24L.75 8.9c-.14.24-.08.54.13.7l2.33 1.82C3.17 11.77 3.14 12.12 3.14 12.5s.03.73.07 1.08L.88 15.4c-.21.16-.27.46-.13.7l2.2 3.82c.14.24.43.32.67.24l2.75-1.11c.57.44 1.18.81 1.86 1.09l.41 2.76c.04.27.27.47.54.47h4.4c.27 0 .5-.2.54-.47l.41-2.76c.68-.28 1.29-.65 1.86-1.09l2.75 1.11c.24.08.53 0 .67-.24l2.2-3.82c.14-.24.08-.54-.13-.7l-2.33-1.82Z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+
+  <!--
+    Shown when ES modules are blocked (e.g. opened directly in Chrome/Edge via file://).
+    Hidden immediately by main.js when it loads successfully.
+  -->
+  <div id="load-error" style="
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    position:fixed; inset:0; background:#1a1a2e; color:#ddd;
+    font-family:system-ui,sans-serif; text-align:center; padding:40px; z-index:9999;">
+    <h2 style="color:#f0a040; margin-bottom:16px;">Almost there!</h2>
+    <p style="max-width:520px; line-height:1.7; margin-bottom:20px;">
+      This page uses modern JavaScript modules, which Chrome and Edge
+      require to be served from a web server — not opened directly as a file.
+    </p>
+    <p style="font-size:1.1em; margin-bottom:8px;">
+      ✅ &nbsp;<strong>Double-click <code>start.bat</code></strong> in the HavenMap folder
+      — it starts a tiny local server and opens the page automatically.
+    </p>
+    <p style="font-size:0.9em; color:#aaa;">
+      (Alternatively, open this file with <strong>Mozilla Firefox</strong>, which works without a server.)
+    </p>
+  </div>
+
+  <!-- Element bar — bottom of viewport, left of sidebar -->
+  <div id="element-bar">
+    <div class="el-group el-group--tools">
+      <div class="el-tool-cluster">
+        <button id="undo-btn" title="Undo" aria-label="Undo" disabled>↶</button>
+        <button id="redo-btn" title="Redo" aria-label="Redo" disabled>↷</button>
+      </div>
+      <div class="el-tool-cluster el-zoom">
+        <button id="zoom-out">−</button>
+        <span id="zoom-label">100%</span>
+        <button id="zoom-in">+</button>
+      </div>
+    </div>
+    <div class="el-group el-group--play">
+      <div id="wd-playbar"></div>
+    </div>
+  </div>
+
+  <div id="mobile-shell" aria-label="Mobile controls">
+    <div id="mobile-panel"></div>
+    <nav id="mobile-tabs" aria-label="Mobile panels">
+      <button class="mobile-tab" data-mobile-panel="controls" type="button">Controls</button>
+      <button class="mobile-tab" data-mobile-panel="elements" type="button">Elements</button>
+      <button class="mobile-tab" data-mobile-panel="selection" type="button">Selection</button>
+      <button class="mobile-tab" data-mobile-panel="settings" type="button">Settings</button>
+    </nav>
+  </div>
+
+  <script type="module" src="scripts/main.js?v=mobile-3"></script>
+  <script type="module">
+    // If modules loaded, hide the error overlay immediately.
+    document.getElementById('load-error').style.display = 'none';
+  </script>
+</body>
+</html>
