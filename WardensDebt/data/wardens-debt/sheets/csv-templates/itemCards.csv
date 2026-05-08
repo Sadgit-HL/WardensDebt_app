@@ -1,0 +1,2 @@
+id,name,cost,text,tags,effects
+item-bandage,Placeholder Bandage,1,Heal 1.,"item,healing,print,component:card,print-group:item-cards","[{""type"":""heal"",""target"":""self"",""amount"":1}]"

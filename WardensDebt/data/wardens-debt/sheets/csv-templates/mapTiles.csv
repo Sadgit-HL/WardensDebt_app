@@ -1,0 +1,3 @@
+id,name,layoutKey,tags
+tile-cell-a,Placeholder Cell Tile,cell-a,"tile,room,print,component:board,print-group:map-tiles"
+tile-hall-a,Placeholder Hall Tile,hall-a,"tile,hallway,print,component:board,print-group:map-tiles"

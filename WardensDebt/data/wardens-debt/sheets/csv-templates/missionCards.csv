@@ -1,0 +1,3 @@
+id,name,text,tags,effects
+mission-breakout,Placeholder Mission,A placeholder mission card for scenario-level goals.,"mission,placeholder,print,component:card,print-group:mission-cards","[{""type"":""gain_guard"",""target"":""self"",""amount"":1}]"
+mission-escape-route,Placeholder Mission Two,A second mission card to prove deterministic stack order.,"mission,placeholder,print,component:card,print-group:mission-cards","[{""type"":""draw_cards"",""target"":""self"",""count"":1}]"

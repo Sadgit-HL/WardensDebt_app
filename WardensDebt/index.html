@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Warden's Debt</title>
+  <link rel="stylesheet" href="styles/main.css?v=mobile-3">
+</head>
+<body>
+
+  <!-- Game viewport container -->
+  <div id="game">
+
+    <!-- Full-viewport board (SVG) -->
+    <svg id="board-svg" xmlns="http://www.w3.org/2000/svg">
+      <g id="board-group">
+        <g id="layer-grid"></g>      <!-- hex grid lines + coordinate labels -->
+        <g id="layer-tiles"></g>     <!-- map tiles (bottom-most) -->
+        <g id="layer-overlays"></g>  <!-- overlay tiles, doors -->
+        <g id="layer-selection"></g> <!-- selected hex/object highlight -->
+        <g id="layer-figures"></g>   <!-- monsters, heroes, familiars, map tokens -->
+        <g id="layer-drag"></g>      <!-- drag highlight, drawn above everything -->
+      </g>
+    </svg>
+
+    <!-- Top bar: Phase, Dice, Shared Decks -->
+    <div id="top-bar" aria-label="Game controls and phase">
+      <div id="wd-phase-strip"></div>
+      <div id="wd-counter-strip"></div>
+      <div id="wd-skill-strip"></div>
+      <div id="wd-deck-strip"></div>
+    </div>
+
+    <!-- Left bar: Other convicts selector (center-left overlay) -->
+    <div id="left-bar-wrapper">
+      <button id="clear-url-btn" title="Clear saved state and reset">↺</button>
+      <div id="left-bar" aria-label="Convict selector">
+        <!-- Rendered by left-bar renderer -->
+      </div>
+    </div>
+
+    <!-- Info panel: Selected object info (center-right overlay) -->
+    <div id="info-panel" aria-label="Object information">
+      <!-- Rendered by sidebar.js -->
+    </div>
+
+    <!-- Player UI: Hand, Portrait, Active Cards (bottom) -->
+    <div id="player-ui" aria-label="Player cards and convict">
+      <div id="hand-section" aria-label="Skill cards in hand">
+        <!-- Rendered: hand cards -->
+      </div>
+      <div id="convict-section" aria-label="Active convict">
+        <div id="wd-playbar">
+          <!-- Rendered: convict portrait + stats -->
+        </div>
+      </div>
+      <div id="active-section" aria-label="Active Cards">
+        <div id="wd-active-strip">
+          <!-- Rendered: active cards -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!--
+    Shown when ES modules are blocked (e.g. opened directly in Chrome/Edge via file://).
+    Hidden immediately by main.js when it loads successfully.
+  -->
+  <div id="load-error" style="
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    position:fixed; inset:0; background:#1a1a2e; color:#ddd;
+    font-family:system-ui,sans-serif; text-align:center; padding:40px; z-index:9999;">
+    <h2 style="color:#f0a040; margin-bottom:16px;">Almost there!</h2>
+    <p style="max-width:520px; line-height:1.7; margin-bottom:20px;">
+      This page uses modern JavaScript modules, which Chrome and Edge
+      require to be served from a web server — not opened directly as a file.
+    </p>
+    <p style="font-size:1.1em; margin-bottom:8px;">
+      ✅ &nbsp;<strong>Double-click <code>start.bat</code></strong> in the WardensDebt folder
+      — it starts a tiny local server and opens the page automatically.
+    </p>
+    <p style="font-size:0.9em; color:#aaa;">
+      (Alternatively, open this file with <strong>Mozilla Firefox</strong>, which works without a server.)
+    </p>
+  </div>
+
+
+  <div id="mobile-shell" aria-label="Mobile controls">
+    <div id="mobile-panel"></div>
+    <nav id="mobile-tabs" aria-label="Mobile panels">
+      <button class="mobile-tab" data-mobile-panel="controls" type="button">Controls</button>
+      <button class="mobile-tab" data-mobile-panel="selection" type="button">Selection</button>
+      <button class="mobile-tab" data-mobile-panel="settings" type="button">Settings</button>
+    </nav>
+  </div>
+
+  <script type="module" src="scripts/main.js?v=mobile-3"></script>
+  <script type="module">
+    // If modules loaded, hide the error overlay immediately.
+    document.getElementById('load-error').style.display = 'none';
+  </script>
+</body>
+</html>
