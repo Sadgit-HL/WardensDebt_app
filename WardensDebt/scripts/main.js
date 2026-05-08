@@ -6,9 +6,8 @@ import { initSidebar }                                 from './sidebar.js';
 import { initElements, renderElements }                from './wardensDebt/elements.js';
 import { initMobile }                                  from './mobile.js';
 import { HEX_W, HEX_H, COLS, ROWS, hexCenter }        from './hex.js';
-import { clearSelection }                              from './uiState.js';
-import { subscribeUI, uiState }                        from './uiState.js';
-import { initWardensDebtRuntime, subscribeWardensDebtRuntime, wdUndo, wdRedo, canWdUndo, canWdRedo } from './wardensDebt/runtime.js';
+import { clearSelection, uiState, subscribeUI }        from './uiState.js';
+import { initWardensDebtRuntime, subscribeWardensDebtRuntime, wdUndo, wdRedo, canWdUndo, canWdRedo, getWardensDebtRuntime, updateWardensDebtGameStateViaAction } from './wardensDebt/runtime.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   document.title = `Warden's Debt`;
@@ -121,6 +120,36 @@ document.addEventListener('DOMContentLoaded', () => {
       applyZoom(resetView());
       e.preventDefault();
     }
+  });
+
+  window.addEventListener('keydown', e => {
+    const target = e.target;
+    const isTypingField = target instanceof HTMLElement &&
+      (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+    if (isTypingField || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+    const rt = getWardensDebtRuntime();
+    if (!rt?.gameState) return;
+    const mapTile = uiState.selectedWdMapTile;
+    if (mapTile?.id) {
+      const tile = (rt.gameState.board?.mapTiles || []).find(t => t.id === mapTile.id);
+      if (tile?.locked) return;
+      updateWardensDebtGameStateViaAction('delete-maptile', { tileId: mapTile.id });
+      clearSelection();
+      e.preventDefault();
+      return;
+    }
+    const sel = uiState.selected;
+    if (!sel || (sel.kind !== 'wd-convict' && sel.kind !== 'wd-enemy')) return;
+    const obj = sel.kind === 'wd-convict'
+      ? rt.gameState.convicts?.[sel.idx]
+      : rt.gameState.enemies?.[sel.idx];
+    if (!obj?.id) return;
+    const pos = rt.gameState.board?.figurePositions?.[obj.id];
+    if (pos?.locked) return;
+    updateWardensDebtGameStateViaAction('delete-figure', { figureId: obj.id });
+    clearSelection();
+    e.preventDefault();
   });
 
   // Re-render whenever state changes

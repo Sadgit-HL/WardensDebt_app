@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Warden's Debt</title>
-  <link rel="stylesheet" href="styles/main.css?v=mobile-3">
+  <link rel="stylesheet" href="styles/main.css?v=mobile-4">
 </head>
 <body>
 
@@ -25,10 +25,14 @@
 
     <!-- Top bar: Phase, Dice, Shared Decks -->
     <div id="top-bar" aria-label="Game controls and phase">
+      <div id="wd-left-strips">
+        <div id="wd-counter-strip"></div>
+      </div>
       <div id="wd-phase-strip"></div>
-      <div id="wd-counter-strip"></div>
-      <div id="wd-skill-strip"></div>
-      <div id="wd-deck-strip"></div>
+      <div id="wd-right-strips">
+        <div id="wd-skill-strip"></div>
+        <div id="wd-deck-strip"></div>
+      </div>
     </div>
 
     <!-- Left bar: Other convicts selector (center-left overlay) -->
@@ -38,6 +42,9 @@
         <!-- Rendered by left-bar renderer -->
       </div>
     </div>
+
+    <!-- Popover: anchored to selected figure -->
+    <div id="wd-popover" style="display:none"></div>
 
     <!-- Info panel: Selected object info (center-right overlay) -->
     <div id="info-panel" aria-label="Object information">
@@ -95,7 +102,7 @@
     </nav>
   </div>
 
-  <script type="module" src="scripts/main.js?v=mobile-3"></script>
+  <script type="module" src="scripts/main.js?v=mobile-4"></script>
   <script type="module">
     // If modules loaded, hide the error overlay immediately.
     document.getElementById('load-error').style.display = 'none';

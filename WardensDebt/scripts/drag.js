@@ -386,8 +386,10 @@ function onMouseup(e) {
         : enemies.findIndex(e => e.id === wdFigure.id);
       if (actorIndex >= 0) {
         selectObject(wdFigure.kind, actorIndex, 0, 0);
-        const pos = wdRuntime.gameState?.board?.figurePositions?.[wdFigure.id];
-        if (pos) selectWardensDebtCell(pos.x, pos.y);
+        if (!isConvict) {
+          const pos = wdRuntime.gameState?.board?.figurePositions?.[wdFigure.id];
+          if (pos) selectWardensDebtCell(pos.x, pos.y);
+        }
       }
       return;
     }

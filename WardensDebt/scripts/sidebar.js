@@ -79,8 +79,7 @@ function addWardensDebtPlaceholderFigure(kind, defId) {
   const cellSelection = uiState.selectedCell;
   const position = cellSelection
     ? { x: Math.max(0, Math.round(Number(cellSelection.x) || 0)), y: Math.max(0, Math.round(Number(cellSelection.y) || 0)) }
-    : null;
-  if (!position) return false;
+    : { x: 0, y: 0 };
 
   if (kind === 'convict') {
     const source = (defId && runtime.index.convictDefsById.get(defId))
@@ -346,7 +345,7 @@ function editCounter(span) {
   });
 }
 
-function handlePanelClick(e) {
+export function handlePanelClick(e) {
   const editableCounter = e.target.closest('.sp-counter-editable');
   if (editableCounter && !editableCounter.hasAttribute('data-editing')) {
     editCounter(editableCounter);
@@ -547,13 +546,13 @@ function render() {
     : addPanelOpen ? '480px' : '280px';
   document.documentElement.style.setProperty('--sidebar-w', sidebarW);
 
-  if (!uiState.selectedHex && !uiState.selectedCell && !selectedWdMapTile && !selected) {
-    panel.innerHTML = wardensDebtRosterPanel(wdRuntime);
+  if (addPanelOpen) {
+    panel.innerHTML = addPanel();
     return;
   }
 
-  if (addPanelOpen) {
-    panel.innerHTML = addPanel();
+  if (!uiState.selectedHex && !uiState.selectedCell && !selectedWdMapTile && !selected) {
+    panel.innerHTML = wardensDebtRosterPanel(wdRuntime);
     return;
   }
 
@@ -639,7 +638,7 @@ function wardensDebtRosterPanel(runtime) {
   `;
 }
 
-function wardensDebtObjectPanel(kind, idx) {
+export function wardensDebtObjectPanel(kind, idx) {
   const ctx = wardensDebtSelectionContext({ kind, idx });
   if (!ctx) return hint('Wardens Debt actor unavailable');
 
@@ -719,7 +718,7 @@ function wardensDebtObjectPanel(kind, idx) {
   `;
 }
 
-function wardensDebtMapTilePanel(runtime, tileId) {
+export function wardensDebtMapTilePanel(runtime, tileId) {
   if (runtime.status !== 'ready' || !runtime.gameState) return hint('Wardens Debt runtime unavailable');
   const mapTile = (runtime.gameState.board?.mapTiles || []).find(tile => tile.id === tileId) || null;
   if (!mapTile) return hint('Map tile unavailable');
@@ -761,24 +760,20 @@ const WD_TAB_KEYS = new Set(WD_TABS.map(t => t.key));
 function wdConvictsTabBody(runtime, placement) {
   const defs = [...runtime.index.convictDefsById.values()];
   if (!defs.length) return hint('No convict definitions found.');
-  const dis = placement ? '' : 'disabled';
   return `
     <div class="ap-grid">
-      ${defs.map(def => `<button class="ap-item-btn ap-item-btn--monster" data-action="wd-add-figure" data-figure-kind="convict" data-figure-def-id="${escHtml(def.id)}" ${dis} title="${escHtml(def.name)}">${escHtml(def.name)}</button>`).join('')}
+      ${defs.map(def => `<button class="ap-item-btn ap-item-btn--monster" data-action="wd-add-figure" data-figure-kind="convict" data-figure-def-id="${escHtml(def.id)}" title="${escHtml(def.name)}">${escHtml(def.name)}</button>`).join('')}
     </div>
-    ${!placement ? `<div class="sp-meta-line">Select a cell to enable placement.</div>` : ''}
   `;
 }
 
 function wdEnemiesTabBody(runtime, placement) {
   const cards = [...runtime.index.monsterDefsById.values()];
   if (!cards.length) return hint('No enemy cards found.');
-  const dis = placement ? '' : 'disabled';
   return `
     <div class="ap-grid">
-      ${cards.map(card => `<button class="ap-item-btn ap-item-btn--monster" data-action="wd-add-figure" data-figure-kind="enemy" data-figure-def-id="${escHtml(card.id)}" ${dis} title="${escHtml(card.name)}">${escHtml(card.name)}</button>`).join('')}
+      ${cards.map(card => `<button class="ap-item-btn ap-item-btn--monster" data-action="wd-add-figure" data-figure-kind="enemy" data-figure-def-id="${escHtml(card.id)}" title="${escHtml(card.name)}">${escHtml(card.name)}</button>`).join('')}
     </div>
-    ${!placement ? `<div class="sp-meta-line">Select a cell to enable placement.</div>` : ''}
   `;
 }
 
@@ -805,15 +800,14 @@ function wdMapTilesTabBody() {
 
 function wdSearchBody(query, runtime, placement) {
   const q = query.toLowerCase();
-  const dis = placement ? '' : 'disabled';
   const results = [];
   for (const def of runtime.index.convictDefsById.values()) {
     if (def.name.toLowerCase().includes(q))
-      results.push(`<button class="ap-item-btn ap-item-btn--monster" data-action="wd-add-figure" data-figure-kind="convict" data-figure-def-id="${escHtml(def.id)}" ${dis}>${escHtml(def.name)}</button>`);
+      results.push(`<button class="ap-item-btn ap-item-btn--monster" data-action="wd-add-figure" data-figure-kind="convict" data-figure-def-id="${escHtml(def.id)}">${escHtml(def.name)}</button>`);
   }
   for (const card of runtime.index.monsterDefsById.values()) {
     if (card.name.toLowerCase().includes(q))
-      results.push(`<button class="ap-item-btn ap-item-btn--monster" data-action="wd-add-figure" data-figure-kind="enemy" data-figure-def-id="${escHtml(card.id)}" ${dis}>${escHtml(card.name)}</button>`);
+      results.push(`<button class="ap-item-btn ap-item-btn--monster" data-action="wd-add-figure" data-figure-kind="enemy" data-figure-def-id="${escHtml(card.id)}">${escHtml(card.name)}</button>`);
   }
   for (const tileId of Object.keys(WARDENS_DEBT_MAP_TILES)) {
     const label = tileId.replace('tile-', '');
@@ -824,7 +818,7 @@ function wdSearchBody(query, runtime, placement) {
   return `<div class="ap-grid">${results.join('')}</div>`;
 }
 
-function addPanel() {
+export function addPanel() {
   const runtime = getWardensDebtRuntime();
   if (runtime.status !== 'ready' || !runtime.gameState) return hint('Wardens Debt runtime unavailable');
 
@@ -832,7 +826,7 @@ function addPanel() {
   const placement = cellSelection
     ? { x: Math.round(cellSelection.x), y: Math.round(cellSelection.y) }
     : null;
-  const cellLabel = placement ? `${placement.x}, ${placement.y}` : 'Select a cell to place pieces';
+  const cellLabel = placement ? `${placement.x}, ${placement.y}` : 'No cell selected — placed at origin';
 
   const search = uiState.addPanelSearch;
   const rawTab = uiState.addPanelTab;

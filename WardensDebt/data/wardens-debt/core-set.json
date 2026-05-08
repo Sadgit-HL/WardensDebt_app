@@ -472,9 +472,7 @@
       "mapTileIds": [
         "tile-41b"
       ],
-      "monsterCardIds": [
-        "monster-collector"
-      ],
+      "monsterCardIds": [],
       "tags": [
         "location",
         "intro-room",
@@ -595,7 +593,7 @@
         "locationDeckId": "location-deck-a",
         "agendaDeckId": "agenda-deck-a",
         "missionDeckId": "mission-deck-a",
-        "startingLocationCardId": "location-cell-block-a",
+        "startingLocationCardId": null,
         "diceDefIds": [
           "d6-basic",
           "d6-basic"

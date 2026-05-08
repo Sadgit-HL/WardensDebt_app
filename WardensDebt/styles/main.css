@@ -50,7 +50,9 @@ body {
   left: 0;
   right: 0;
   height: auto;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
   background: rgba(10 10 30 / 0.82);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(255 255 255 / 0.08);
@@ -59,12 +61,31 @@ body {
   z-index: 20;
 }
 
+#wd-left-strips {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#wd-phase-strip {
+  grid-column: 2;
+  justify-self: center;
+}
+
+#wd-right-strips {
+  grid-column: 3;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
 /* Left bar: fixed to left-center, overlay */
 #left-bar-wrapper {
   position: fixed;
   left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+  bottom: var(--player-ui-height, 120px);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -90,6 +111,23 @@ body {
 }
 
 #clear-url-btn:hover {
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+}
+
+.wd-left-bar-add {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px 10px;
+  backdrop-filter: blur(6px);
+}
+
+.wd-left-bar-add:hover {
   background: rgba(0, 0, 0, 0.75);
   color: #fff;
 }
@@ -148,6 +186,84 @@ body {
   padding: 8px 12px;
   backdrop-filter: blur(6px);
   color: #fff;
+}
+
+#wd-popover {
+  position: fixed;
+  width: 280px;
+  background: rgba(10 10 30 / 0.96);
+  border: 1px solid rgba(255 255 255 / 0.18);
+  border-radius: 10px;
+  padding: 0;
+  backdrop-filter: blur(10px);
+  color: #fff;
+  z-index: 60;
+}
+
+#wd-popover .sp-panel-back {
+  display: none;
+}
+
+.wd-popover-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255 255 255 / 0.92);
+}
+
+.wd-popover-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wd-popover-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255 255 255 / 0.45);
+  flex: 1;
+}
+
+.wd-popover-value {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 40px;
+  text-align: center;
+}
+
+.wd-popover-btn {
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid rgba(255 255 255 / 0.2);
+  background: rgba(255 255 255 / 0.08);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.wd-popover-btn:hover {
+  background: rgba(255 255 255 / 0.18);
+  border-color: rgba(255 255 255 / 0.4);
+}
+
+.wd-popover-btn--danger {
+  width: auto;
+  padding: 0 10px;
+  color: #f87171;
+  border-color: rgba(248 113 113 / 0.4);
+}
+
+.wd-popover-btn--danger:hover {
+  background: rgba(248 113 113 / 0.18);
+  border-color: rgba(248 113 113 / 0.7);
 }
 
 #wd-debug-panel {
@@ -1582,11 +1698,6 @@ body {
   display: none;
 }
 
-#wd-topbar {
-  /* Merged into #top-bar in new layout */
-  display: contents;
-}
-
 #wd-phase-strip {
   display: flex;
   align-items: center;
@@ -1660,7 +1771,6 @@ body {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin-left: auto;
   min-width: 0;
   flex-wrap: wrap;
 }
@@ -1671,6 +1781,17 @@ body {
   align-items: center;
   gap: 4px;
   min-width: 64px;
+}
+
+.wd-deck-group--sep {
+  padding-right: 8px;
+  border-right: 1px solid rgba(255 255 255 / 0.15);
+  margin-right: 0;
+}
+
+#wd-skill-strip {
+  padding-right: 8px;
+  border-right: 1px solid rgba(255 255 255 / 0.15);
 }
 
 .wd-deck-label {
@@ -1832,63 +1953,6 @@ body {
   overflow: visible;
 }
 
-.wd-shared-deck-list {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-  row-gap: 4px;
-  flex-wrap: wrap;
-  min-width: 0;
-  overflow: visible;
-}
-
-.wd-shared-deck-btn {
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-height: 24px;
-  padding: 0 7px;
-  border: 1px solid rgba(240 180 40 / 0.24);
-  border-radius: 999px;
-  background: rgba(240 180 40 / 0.10);
-  color: rgba(255 244 210 / 0.92);
-  font: inherit;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.wd-shared-deck-btn:hover {
-  border-color: rgba(240 180 40 / 0.42);
-  background: rgba(240 180 40 / 0.18);
-}
-
-.wd-shared-deck-btn:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
-.wd-shared-deck-label {
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.wd-shared-deck-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: rgba(255 255 255 / 0.10);
-  color: rgba(255 255 255 / 0.94);
-  font-size: 11px;
-  font-weight: 900;
-}
 
 .wd-active-strip-list {
   display: flex;
@@ -2356,12 +2420,6 @@ body {
   min-height: 16px;
 }
 
-.wd-playbar-subhead {
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(255 255 255 / 0.42);
-}
 
 .wd-playbar-hand {
   display: flex;
@@ -2392,12 +2450,14 @@ body {
   gap: 8px;
 }
 
-.wd-skill-card.is-playable {
+.wd-skill-card.is-playable,
+.wd-active-card.is-playable {
   cursor: pointer;
   border-color: rgba(114, 171, 132, 0.5);
 }
 
-.wd-skill-card.is-playable:hover {
+.wd-skill-card.is-playable:hover,
+.wd-active-card.is-playable:hover {
   border-color: rgba(114, 171, 132, 0.9);
   background:
     linear-gradient(180deg, rgba(114 171 132 / 0.2), rgba(34 22 14 / 0.18)),
@@ -2450,13 +2510,6 @@ body {
   gap: 8px;
 }
 
-.wd-active-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
 .wd-skill-card-role {
   font-size: 10px;
   letter-spacing: 0.12em;
@@ -2469,17 +2522,6 @@ body {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(255 255 255 / 0.45);
-}
-
-.wd-queue-state {
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(255 255 255 / 0.45);
-}
-
-.wd-queue-state.is-resolved {
-  color: #d5efdc;
 }
 
 .wd-skill-card-title {
@@ -2741,11 +2783,6 @@ body {
     padding-bottom: 56px;
   }
 
-  #wd-topbar {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
-    align-items: stretch;
-  }
 
   #wd-phase-strip,
   #wd-deck-strip,
@@ -2765,8 +2802,7 @@ body {
     grid-row: 3;
   }
 
-  #wd-deck-strip,
-  .wd-shared-deck-list {
+  #wd-deck-strip {
     justify-content: flex-start;
   }
 
@@ -2951,10 +2987,6 @@ body {
     display: block;
   }
 
-
-  #wd-topbar {
-    display: none;
-  }
 
   #mobile-shell {
     position: fixed;

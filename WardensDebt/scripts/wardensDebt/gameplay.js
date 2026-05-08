@@ -819,3 +819,36 @@ export function unplayWardensDebtSkillCard(
 
   return { gameState: nextState, cardId: entry.cardId };
 }
+
+export function discardWardensDebtSkillCard(
+  gameState,
+  contentIndex,
+  convictIndex,
+  queueName,
+  queueIndex
+) {
+  const phase = gameState.turn?.phase;
+  if (queueName === 'fastSkills' && phase !== 'fast-cards') {
+    throw new Error('Fast cards can only be discarded during the fast-cards phase');
+  }
+  if (queueName === 'slowSkills' && phase !== 'slow-cards') {
+    throw new Error('Slow cards can only be discarded during the slow-cards phase');
+  }
+
+  const nextState = cloneWardensDebtGameState(gameState);
+  const convict = resolveConvict(nextState, convictIndex);
+  const queue = nextState.activeCards?.[queueName];
+  if (!Array.isArray(queue)) throw new Error(`Active skill queue "${queueName}" is missing`);
+
+  const entry = queue[queueIndex];
+  if (!entry || entry.convictIndex !== convictIndex) {
+    throw new Error(`No card at queue index ${queueIndex} for this convict`);
+  }
+
+  queue.splice(queueIndex, 1);
+  convict.discardPile.push(entry.cardId);
+
+  validateNextState(nextState, contentIndex, 'discard skill card');
+
+  return { gameState: nextState, cardId: entry.cardId };
+}

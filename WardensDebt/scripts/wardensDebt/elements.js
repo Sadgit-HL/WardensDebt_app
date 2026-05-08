@@ -4,13 +4,13 @@ import {
   drawWardensDebtConvictCard,
   playWardensDebtSkillCard,
   unplayWardensDebtSkillCard,
+  discardWardensDebtSkillCard,
   redrawWardensDebtConvictHand,
   refreshWardensDebtActiveDeck,
   rollWardensDebtDie,
   rollWardensDebtDicePool,
   retreatWardensDebtPhase,
   startNextWardensDebtRound,
-  WARDENS_DEBT_PHASE_SEQUENCE,
 } from './gameplay.js';
 import {
   getWardensDebtRuntime,
@@ -18,7 +18,8 @@ import {
   updateWardensDebtGameStateViaAction,
   subscribeWardensDebtRuntime,
 } from './runtime.js';
-import { uiState, selectFromStack, subscribeUI } from '../uiState.js';
+import { uiState, selectFromStack, subscribeUI, openAddPanel, closeAddPanel, clearSelection } from '../uiState.js';
+import { addPanel, handlePanelClick, wardensDebtObjectPanel, wardensDebtMapTilePanel } from '../sidebar.js';
 
 let activeConvictIndex = 0;
 
@@ -65,10 +66,10 @@ function cardDetails(runtime, cardId) {
 }
 
 const ACTIVE_DECK_GROUPS = [
-  { deckGroup: 'monsterDeck', activeGroup: 'monster', label: 'Monster', indexKey: 'monsterDefsById' },
-  { deckGroup: 'eventDeck', activeGroup: 'event', label: 'Event', indexKey: 'eventDefsById', perConvict: true },
-  { deckGroup: 'itemDeck', activeGroup: 'item', label: 'Item', indexKey: 'itemDefsById' },
-  { deckGroup: 'locationDeck', activeGroup: 'location', label: 'Location', indexKey: 'locationDefsById', hasHover: true },
+  { deckGroup: 'monsterDeck', activeGroup: 'monster', label: 'Monster', indexKey: 'monsterDefsById', hasSep: true },
+  { deckGroup: 'eventDeck', activeGroup: 'event', label: 'Event', indexKey: 'eventDefsById', perConvict: true, hasSep: true },
+  { deckGroup: 'itemDeck', activeGroup: 'item', label: 'Item', indexKey: 'itemDefsById', hasSep: true },
+  { deckGroup: 'locationDeck', activeGroup: 'location', label: 'Location', indexKey: 'locationDefsById', hasHover: true, hasSep: true },
   { deckGroup: 'agendaDeck', activeGroup: 'agenda', label: 'Agenda', indexKey: 'agendaDefsById', hasHover: true },
   { deckGroup: 'missionDeck', activeGroup: 'mission', label: 'Mission', indexKey: 'missionDefsById', hasHover: true },
 ];
@@ -105,20 +106,6 @@ function skillCardHoverDetailHtml(card) {
 
 
 
-function sharedDeckButtons(runtime) {
-  return ACTIVE_DECK_GROUPS
-    .filter(config => runtime.gameState.decks?.[config.deckGroup])
-    .map(config => {
-      const deckState = runtime.gameState.decks[config.deckGroup];
-      const remaining = Array.isArray(deckState.drawPile) ? deckState.drawPile.length : 0;
-      return `
-        <button class="wd-shared-deck-btn" data-wd-action="draw-active" data-deck-group="${config.deckGroup}" ${remaining > 0 ? '' : 'disabled'}>
-          <span class="wd-shared-deck-label">${config.label}</span>
-          <span class="wd-shared-deck-count">${remaining}</span>
-        </button>
-      `;
-    }).join('');
-}
 
 function queuedSkillSections(runtime) {
   const queueConfigs = [
@@ -126,7 +113,9 @@ function queuedSkillSections(runtime) {
     { key: 'slowSkills', label: 'Slow Skills' },
   ];
 
-  const canUnplay = runtime.gameState.turn?.phase === 'select-cards';
+  const phase = runtime.gameState.turn?.phase;
+  const canUnplay = phase === 'select-cards';
+  const canDiscardFast = phase === 'fast-cards';
 
   return queueConfigs.map(config => {
     const fullQueue = runtime.gameState.activeCards?.[config.key] || [];
@@ -135,14 +124,19 @@ function queuedSkillSections(runtime) {
       .filter(({ qc }) => qc.convictIndex === activeConvictIndex);
     if (!entries.length) return '';
 
+    const canDiscard = (canDiscardFast && config.key === 'fastSkills') || (phase === 'slow-cards' && config.key === 'slowSkills');
+
     const cardsHtml = entries.map(({ qc: queuedCard, realIndex }) => {
       const card = cardDetails(runtime, queuedCard.cardId);
       const returnBtn = canUnplay
         ? `<button class="wd-active-card-return" data-wd-action="unplay-card" data-queue-name="${escapeHtml(config.key)}" data-queue-index="${realIndex}" title="Return to hand">&#8592;</button>`
         : '';
+      const discardAttrs = canDiscard
+        ? `data-wd-action="discard-card" data-queue-name="${escapeHtml(config.key)}" data-queue-index="${realIndex}"`
+        : '';
       return `
         <div class="wd-card-hover-wrapper">
-          <article class="wd-active-card">
+          <article class="wd-active-card${canDiscard ? ' is-playable' : ''}" ${discardAttrs}>
             ${returnBtn}
             <div class="wd-active-card-type">${escapeHtml(config.label)}</div>
             <div class="wd-active-card-title">${escapeHtml(card?.name || queuedCard.cardId)}</div>
@@ -187,7 +181,7 @@ function renderLeftBar(runtime) {
     `;
   }).join('');
 
-  leftBar.innerHTML = html;
+  leftBar.innerHTML = html + `<button class="wd-left-bar-add" data-wd-action="open-add" title="Add figure">+</button>`;
 }
 
 function renderLoading(playbar) {
@@ -303,17 +297,11 @@ function renderSkillStrip(runtime) {
 
   const groupsHtml = decks.map((deckState, deckIndex) => {
     const remaining = deckState.drawPile?.length ?? 0;
-    const topCardId = deckState.drawPile?.[0] || null;
-    const topCard = topCardId ? runtime.index?.skillDefsById?.get(topCardId) : null;
-
-    const previewHtml = topCard
-      ? `<div class="wd-deck-active-card">${escapeHtml(topCard.name)}</div>`
-      : `<div class="wd-deck-active-empty">—</div>`;
 
     return `
       <div class="wd-deck-group">
         <div class="wd-deck-label">Common ${decks.length > 1 ? deckIndex + 1 : ''}</div>
-        <div class="wd-deck-active-cards">${previewHtml}</div>
+        <div class="wd-deck-active-cards"><div class="wd-deck-active-empty">—</div></div>
         <button class="wd-deck-draw-btn" data-wd-action="draw-common" data-deck-index="${deckIndex}" ${remaining > 0 ? '' : 'disabled'}>
           Draw
         </button>
@@ -357,7 +345,7 @@ function renderDeckStrip(runtime) {
         : `<div class="wd-deck-active-empty">—</div>`;
 
       return `
-        <div class="wd-deck-group">
+        <div class="wd-deck-group${config.hasSep ? ' wd-deck-group--sep' : ''}">
           <div class="wd-deck-label">${escapeHtml(config.label)}</div>
           <div class="wd-deck-active-cards">${activeCardsHtml}</div>
           <button class="wd-deck-draw-btn" data-wd-action="refresh-active-deck" data-deck-group="${config.deckGroup}" ${config.perConvict ? 'data-per-convict="1"' : ''} ${remaining > 0 ? '' : 'disabled'}>
@@ -380,6 +368,60 @@ function renderActiveStrip(runtime) {
   }
 
   activeStrip.innerHTML = queuedSkillSections(runtime);
+}
+
+function renderInfoPanel() {
+  const panel = document.getElementById('info-panel');
+  if (!panel) return;
+  if (uiState.addPanelOpen) {
+    panel.innerHTML = addPanel();
+  } else {
+    panel.innerHTML = '';
+  }
+}
+
+function renderObjectPopover(runtime) {
+  const popover = document.getElementById('wd-popover');
+  if (!popover) return;
+
+  if (runtime.status !== 'ready' || !runtime.gameState) {
+    popover.style.display = 'none';
+    return;
+  }
+
+  const sel = uiState.selected;
+  const mapTile = uiState.selectedWdMapTile;
+
+  let anchorId = null;
+  let html = null;
+
+  if (sel?.kind === 'wd-convict' || sel?.kind === 'wd-enemy') {
+    const arr = sel.kind === 'wd-convict' ? runtime.gameState.convicts : runtime.gameState.enemies;
+    const obj = arr?.[sel.idx];
+    if (!obj) { popover.style.display = 'none'; return; }
+    anchorId = obj.id;
+    html = wardensDebtObjectPanel(sel.kind, sel.idx);
+  } else if (mapTile?.id) {
+    anchorId = mapTile.id;
+    html = wardensDebtMapTilePanel(runtime, mapTile.id);
+  } else {
+    popover.style.display = 'none';
+    return;
+  }
+
+  const anchorEl = document.querySelector(`[data-wd-id="${CSS.escape(anchorId)}"]`);
+  const rect = anchorEl?.getBoundingClientRect();
+  if (!rect) { popover.style.display = 'none'; return; }
+
+  const W = 280;
+  const estimatedH = 320;
+  let left = rect.left + rect.width / 2 - W / 2;
+  const above = rect.top - estimatedH - 8 >= 8;
+  const top = above ? rect.top - estimatedH - 8 : rect.bottom + 8;
+  left = Math.max(8, Math.min(left, window.innerWidth - W - 8));
+
+  popover.style.cssText = `display:block;left:${left}px;top:${top}px;`;
+  popover.innerHTML = html;
 }
 
 function renderConvictPortrait(playbar, runtime) {
@@ -455,8 +497,10 @@ export function renderElements() {
     renderSkillStrip(runtime);
     renderDeckStrip(runtime);
     renderActiveStrip(runtime);
+    renderObjectPopover(runtime);
     renderPhaseStrip(runtime);
     renderDiceTray(runtime);
+    renderInfoPanel();
     return;
   }
 
@@ -468,8 +512,10 @@ export function renderElements() {
     renderSkillStrip(runtime);
     renderDeckStrip(runtime);
     renderActiveStrip(runtime);
+    renderObjectPopover(runtime);
     renderPhaseStrip(runtime);
     renderDiceTray(runtime);
+    renderInfoPanel();
     return;
   }
 
@@ -480,12 +526,21 @@ export function renderElements() {
   renderSkillStrip(runtime);
   renderDeckStrip(runtime);
   renderActiveStrip(runtime);
+  renderObjectPopover(runtime);
   renderPhaseStrip(runtime);
   renderDiceTray(runtime);
+  renderInfoPanel();
 }
 
 function handleAction(actionButton) {
   const action = actionButton.dataset.wdAction;
+
+  if (action === 'open-add') {
+    openAddPanel();
+    return;
+  }
+
+
   const runtime = getWardensDebtRuntime();
   if (runtime.status !== 'ready' || !runtime.gameState || !runtime.index) return;
 
@@ -550,14 +605,6 @@ function handleAction(actionButton) {
       return;
     }
 
-    if (action === 'draw-active') {
-      const deckGroup = actionButton.dataset.deckGroup;
-      if (!deckGroup) return;
-      const result = drawWardensDebtDeckCard(runtime.gameState, runtime.index, { group: deckGroup });
-      setWardensDebtGameState(result.gameState);
-      return;
-    }
-
     if (action === 'refresh-active-deck') {
       const deckGroup = actionButton.dataset.deckGroup;
       if (!deckGroup) return;
@@ -576,6 +623,7 @@ function handleAction(actionButton) {
       updateWardensDebtGameStateViaAction('adjust-counter', { counter, delta });
       return;
     }
+
 
     if (action === 'roll-die') {
       const dieIndex = Number(actionButton.dataset.dieIndex);
@@ -618,6 +666,21 @@ function handleAction(actionButton) {
       setWardensDebtGameState(result.gameState);
       return;
     }
+
+    if (action === 'discard-card') {
+      const queueName = actionButton.dataset.queueName;
+      const queueIndex = Number(actionButton.dataset.queueIndex);
+      if (!queueName || !Number.isInteger(queueIndex)) return;
+      const result = discardWardensDebtSkillCard(
+        runtime.gameState,
+        runtime.index,
+        activeConvictIndex,
+        queueName,
+        queueIndex
+      );
+      setWardensDebtGameState(result.gameState);
+      return;
+    }
   } catch (error) {
     console.error(error);
   }
@@ -638,6 +701,15 @@ export function initElements() {
     location.replace(url.toString());
   });
 
+  const playerUi = document.getElementById('player-ui');
+  if (playerUi) {
+    const updatePlayerUiHeight = () => {
+      document.documentElement.style.setProperty('--player-ui-height', `${playerUi.offsetHeight}px`);
+    };
+    updatePlayerUiHeight();
+    new ResizeObserver(updatePlayerUiHeight).observe(playerUi);
+  }
+
   const handleContainerClick = event => {
     const actionButton = event.target.closest('[data-wd-action]');
     if (!actionButton) return;
@@ -649,6 +721,21 @@ export function initElements() {
   activeSection?.addEventListener('click', handleContainerClick);
   leftBar?.addEventListener('click', handleContainerClick);
   topBar?.addEventListener('click', handleContainerClick);
+
+  document.getElementById('wd-popover')?.addEventListener('click', handlePanelClick);
+
+  const infoPanel = document.getElementById('info-panel');
+  if (infoPanel) {
+    infoPanel.addEventListener('click', handlePanelClick);
+    infoPanel.addEventListener('input', e => {
+      if (e.target.id !== 'add-search') return;
+      const pos = e.target.selectionStart;
+      uiState.addPanelSearch = e.target.value;
+      renderElements();
+      const input = document.getElementById('add-search');
+      if (input) { input.focus(); input.setSelectionRange(pos, pos); }
+    });
+  }
 
   subscribeWardensDebtRuntime(renderElements);
   subscribeUI(renderElements);
