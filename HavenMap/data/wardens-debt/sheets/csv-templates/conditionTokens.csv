@@ -1,3 +1,0 @@
-id,name,description,tags
-marked,Marked,The next precise hit gains bonus damage.,"debuff,print,component:token,print-group:condition-tokens"
-guarded,Guarded,Reduce incoming damage by one until spent.,"buff,print,component:token,print-group:condition-tokens"

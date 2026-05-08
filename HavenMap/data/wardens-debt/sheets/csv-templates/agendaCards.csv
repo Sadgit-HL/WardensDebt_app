@@ -1,3 +1,0 @@
-id,name,text,tags,effects
-agenda-keep-moving,Placeholder Agenda,A placeholder agenda card for future progression rules.,"agenda,placeholder,print,component:card,print-group:agenda-cards","[{""type"":""draw_cards"",""target"":""self"",""count"":1}]"
-agenda-secure-route,Placeholder Agenda Two,A second agenda card to prove deterministic stack order.,"agenda,placeholder,print,component:card,print-group:agenda-cards","[{""type"":""gain_guard"",""target"":""self"",""amount"":1}]"

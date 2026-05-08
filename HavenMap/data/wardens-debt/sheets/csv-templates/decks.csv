@@ -1,9 +1,0 @@
-id,name,kind,cardIds
-common-skill-deck-a,Placeholder Common Skill Deck A,common-skill,"common-brawler-swing,common-brawler-protect"
-common-skill-deck-b,Placeholder Common Skill Deck B,common-skill,"common-cunning-bolt,common-cunning-trick"
-monster-deck-a,Placeholder Monster Deck,monster,monster-collector
-event-deck-a,Placeholder Event Deck,event,"event-lockdown,event-lights-out"
-item-deck-a,Placeholder Item Deck,item,item-bandage
-location-deck-a,Placeholder Location Deck,location,location-cell-block-a
-agenda-deck-a,Placeholder Agenda Stack,agenda,"agenda-keep-moving,agenda-secure-route"
-mission-deck-a,Placeholder Mission Stack,mission,"mission-breakout,mission-escape-route"

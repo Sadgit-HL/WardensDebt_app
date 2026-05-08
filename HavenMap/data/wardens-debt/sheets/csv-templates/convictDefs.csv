@@ -1,3 +1,0 @@
-id,name,health,handSize,starterSkillCardIds,tags
-convict-a,Placeholder Convict A,12,8,"convict-a-starter-strike,convict-a-starter-guard","convict,frontline,print,component:card,print-group:convict-cards"
-convict-b,Placeholder Convict B,8,8,"convict-b-starter-shot,convict-b-starter-focus","convict,ranged,print,component:card,print-group:convict-cards"

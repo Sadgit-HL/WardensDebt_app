@@ -1,3 +1,0 @@
-id,name,text,tags,effects
-event-lockdown,Placeholder Lockdown,Apply Marked to the lead convict.,"event,pressure,print,component:card,print-group:event-cards","[{""type"":""apply_condition"",""target"":""convict"",""conditionId"":""marked""}]"
-event-lights-out,Placeholder Lights Out,A second placeholder event card for multi-convict event draws.,"event,pressure,print,component:card,print-group:event-cards","[{""type"":""roll_die"",""target"":""self""}]"

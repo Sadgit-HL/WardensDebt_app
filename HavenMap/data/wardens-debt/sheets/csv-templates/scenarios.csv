@@ -1,2 +1,0 @@
-id,name,playerSlots,convictIds,commonSkillDeckIds,monsterDeckId,eventDeckId,itemDeckId,locationDeckId,agendaDeckId,missionDeckId,startingLocationCardId,diceIds,conditionTokenIds,startingResources
-breach-the-ledger-vault,Placeholder Scenario One,2,"convict-a,convict-b","common-skill-deck-a,common-skill-deck-b",monster-deck-a,event-deck-a,item-deck-a,location-deck-a,agenda-deck-a,mission-deck-a,location-cell-block-a,"d6-basic,d6-basic","marked,guarded",0

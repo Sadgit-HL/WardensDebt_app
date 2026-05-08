@@ -1,2 +1,0 @@
-id,name,mapTileIds,monsterCardIds,tags
-location-cell-block-a,Placeholder Cell Block,"tile-cell-a,tile-hall-a",monster-collector,"location,intro-room,print,component:card,print-group:location-cards"
