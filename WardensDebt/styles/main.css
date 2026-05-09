@@ -2291,6 +2291,8 @@ body {
   font-weight: 600;
   color: #fff;
   white-space: nowrap;
+  width: 110px;
+  text-align: center;
 }
 
 .wd-phase-track {
