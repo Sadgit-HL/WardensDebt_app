@@ -76,6 +76,10 @@ function migrateWardensDebtGameState(gameState) {
 
   delete gameState.turn.subphase;
 
+  (gameState.convicts || []).forEach(c => {
+    if (c.selectedTacticId === undefined) c.selectedTacticId = null;
+  });
+
   return gameState;
 }
 

@@ -379,6 +379,21 @@ body {
   overflow: visible;
 }
 
+#tactics-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(0px, -10%, 16px);
+  align-items: flex-end;
+  justify-content: flex-start;
+  overflow: visible;
+  grid-column: 3;
+  grid-row: 1;
+}
+
+#tactics-section.hidden {
+  display: none;
+}
+
 #active-section {
   display: flex;
   flex-wrap: wrap;
@@ -386,6 +401,17 @@ body {
   align-items: flex-end;
   justify-content: flex-start;
   overflow: visible;
+  grid-column: 3;
+  grid-row: 1;
+}
+
+#active-section.hidden {
+  display: none;
+}
+
+#settings-section {
+  grid-column: 4;
+  grid-row: 1;
 }
 
 #settings-section {
@@ -2791,6 +2817,51 @@ body {
   border-color: rgba(114, 171, 132, 0.9);
   background:
     linear-gradient(180deg, rgb(114 171 132), rgb(34 22 14));
+}
+
+#wd-tactics-strip {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.wd-tactic-btn {
+  min-width: 120px;
+  max-width: 150px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255 255 255 / 0.15);
+  background: linear-gradient(180deg, rgb(55 65 95), rgb(28 34 55));
+  color: rgba(255 255 255 / 0.85);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.wd-tactic-btn:hover {
+  border-color: rgba(255 255 255 / 0.35);
+  background: linear-gradient(180deg, rgb(70 82 118), rgb(38 46 72));
+}
+
+.wd-tactic-btn.is-selected {
+  border-color: rgba(114 171 132 / 0.8);
+  background: linear-gradient(180deg, rgb(50 90 68), rgb(28 52 42));
+}
+
+.wd-tactic-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: rgba(255 255 255 / 0.9);
+}
+
+.wd-tactic-text {
+  font-size: 0.7rem;
+  color: rgba(255 255 255 / 0.55);
+  line-height: 1.35;
 }
 
 .wd-active-card {

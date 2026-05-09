@@ -253,6 +253,18 @@ export const ACTIONS = {
     return { ...gameState, enemies: nextEnemies };
   },
 
+  // ─── Tactic Selection ────────────────────────────────────────────────────────
+
+  'select-tactic': (gameState, { convictIndex, tacticId }) => {
+    if (!Number.isInteger(convictIndex) || convictIndex < 0) return gameState;
+    const convict = (gameState.convicts || [])[convictIndex];
+    if (!convict) return gameState;
+    const nextConvicts = [...gameState.convicts];
+    const newId = convict.selectedTacticId === tacticId ? null : tacticId;
+    nextConvicts[convictIndex] = { ...convict, selectedTacticId: newId };
+    return { ...gameState, convicts: nextConvicts };
+  },
+
   // ─── Phase Completion ────────────────────────────────────────────────────────
 
   'complete-phase': (gameState, { convictIndex }) => {

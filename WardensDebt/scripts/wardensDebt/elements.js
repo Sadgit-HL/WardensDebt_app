@@ -392,8 +392,10 @@ function renderPhaseActions(runtime) {
         ? 'Tactics selected and resolved'
         : 'Skills selected';
 
+      const tacticRequired = currentSubphase === 'select-tactic' && !activeConvict.selectedTacticId;
+
       html += `<div class="wd-phase-action-card">
-        <button class="wd-convict-subphase-next" data-wd-action="complete-subphase" data-convict-index="${activeConvictIndex}">${buttonLabel}</button>
+        <button class="wd-convict-subphase-next" data-wd-action="complete-subphase" data-convict-index="${activeConvictIndex}" ${tacticRequired ? 'disabled' : ''}>${buttonLabel}</button>
       </div>`;
     }
 
@@ -538,6 +540,56 @@ function renderDeckStrip(runtime) {
       if (hoverBox) hoverBox.style.left = '0';
     });
   });
+}
+
+function renderTacticsStrip(runtime) {
+  const tacticsStrip = document.getElementById('wd-tactics-strip');
+  const tacticsSection = document.getElementById('tactics-section');
+  const activeSection = document.getElementById('active-section');
+  if (!tacticsStrip || !tacticsSection || !activeSection) return;
+
+  if (runtime.status !== 'ready' || !runtime.gameState) {
+    tacticsSection.classList.add('hidden');
+    activeSection.classList.remove('hidden');
+    tacticsStrip.innerHTML = '';
+    return;
+  }
+
+  const phase = runtime.gameState?.turn?.phase;
+  const subphase = runtime.gameState?.turn?.convictSubphases?.[activeConvictIndex];
+
+  // Show tactics section only in tactics 3.1 (select-tactic phase)
+  const showTactics = phase === 'tactics' && subphase === 'select-tactic';
+
+  tacticsSection.classList.toggle('hidden', !showTactics);
+  activeSection.classList.toggle('hidden', showTactics);
+
+  if (!showTactics) {
+    tacticsStrip.innerHTML = '';
+    return;
+  }
+
+  const STUB_TACTICS = [
+    { id: 'tactic-charge',  name: 'Charge',  text: 'Move toward the nearest enemy and attack.' },
+    { id: 'tactic-guard',   name: 'Guard',   text: 'Hold position and gain a defensive bonus.' },
+    { id: 'tactic-retreat', name: 'Retreat', text: 'Fall back and prepare for the next round.' },
+  ];
+
+  const convict = runtime.gameState.convicts[activeConvictIndex];
+  const selected = convict?.selectedTacticId;
+
+  tacticsStrip.innerHTML = STUB_TACTICS.map(t => `
+    <button
+      class="wd-tactic-btn${selected === t.id ? ' is-selected' : ''}"
+      data-wd-action="select-tactic"
+      data-convict-index="${activeConvictIndex}"
+      data-tactic-id="${escapeHtml(t.id)}"
+      title="${escapeHtml(t.text)}"
+    >
+      <div class="wd-tactic-name">${escapeHtml(t.name)}</div>
+      <div class="wd-tactic-text">${escapeHtml(t.text)}</div>
+    </button>
+  `).join('');
 }
 
 function renderActiveStrip(runtime) {
@@ -758,6 +810,7 @@ export function renderElements() {
     renderCounterStrip(runtime);
     renderSkillStrip(runtime);
     renderDeckStrip(runtime);
+    renderTacticsStrip(runtime);
     renderActiveStrip(runtime);
     renderObjectPopover(runtime);
     renderPhaseStrip(runtime);
@@ -776,6 +829,7 @@ export function renderElements() {
     renderCounterStrip(runtime);
     renderSkillStrip(runtime);
     renderDeckStrip(runtime);
+    renderTacticsStrip(runtime);
     renderActiveStrip(runtime);
     renderObjectPopover(runtime);
     renderPhaseStrip(runtime);
@@ -793,6 +847,7 @@ export function renderElements() {
   renderCounterStrip(runtime);
   renderSkillStrip(runtime);
   renderDeckStrip(runtime);
+  renderTacticsStrip(runtime);
   renderActiveStrip(runtime);
   renderSettingsButton(runtime);
   renderSettingsModal(runtime);
@@ -991,6 +1046,14 @@ function handleAction(actionButton) {
       return;
     }
 
+    if (action === 'select-tactic') {
+      const convictIndex = Number(actionButton.dataset.convictIndex);
+      const tacticId = actionButton.dataset.tacticId;
+      if (!Number.isInteger(convictIndex) || !tacticId) return;
+      updateWardensDebtGameStateViaAction('select-tactic', { convictIndex, tacticId });
+      return;
+    }
+
     if (action === 'adjust-counter') {
       const counter = actionButton.dataset.counter;
       const delta = Number(actionButton.dataset.delta);
@@ -1087,6 +1150,7 @@ export function initElements() {
   playbar?.addEventListener('click', handleContainerClick);
   handSection?.addEventListener('click', handleContainerClick);
   activeSection?.addEventListener('click', handleContainerClick);
+  document.getElementById('tactics-section')?.addEventListener('click', handleContainerClick);
   leftBar?.addEventListener('click', handleContainerClick);
   topBar?.addEventListener('click', handleContainerClick);
   document.getElementById('settings-section')?.addEventListener('click', handleContainerClick);

@@ -703,6 +703,7 @@ export function createWardensDebtGameState(content, scenarioId) {
       resources: scenario.setup.startingResources,
       guards: 0,
       conditions: [],
+      selectedTacticId: null,
     };
   });
 

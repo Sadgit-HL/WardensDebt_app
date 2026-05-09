@@ -351,6 +351,10 @@ function setWardensDebtPhase(nextState, contentIndex, phase, round, triggerAutom
   nextState.turn.activeSide = activeSideForPhase(phase);
   nextState.turn.phaseComplete = nextState.turn.phaseComplete.map(() => false);
 
+  if (phase === 'upkeep') {
+    nextState.convicts = nextState.convicts.map(c => ({ ...c, selectedTacticId: null }));
+  }
+
   const phaseConfig = PHASE_CONFIG[phase];
   const initialSubphase = phaseConfig?.subphases?.[0] || null;
   nextState.turn.convictSubphases = nextState.turn.convictSubphases.map(() => initialSubphase);

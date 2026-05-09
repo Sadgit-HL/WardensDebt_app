@@ -105,11 +105,16 @@ Documentation Structure (2026-05-08):
 - `#board-svg` — full-viewport SVG base (z-index: 1)
 - `#top-bar` — fixed top, transparent flex, controls grouped
 - `#left-bar` — absolute overlay, left-center, convict toggles
+- `#phase-notification` — absolute overlay, left-center, phase instructions
+- `#phase-actions` — absolute overlay, right-center, per-convict completion buttons
 - `#info-panel` — absolute overlay, right-center, transparent, scrollable
-- `#player-ui` — fixed bottom, transparent flex, 3 sections:
-  - `#hand-section` — flex, cards overlap left-to-right
-  - `#convict-section` — fixed-size portrait + stats
-  - `#active-section` — flex, queued cards overlap left-to-right
+- `#player-ui` — fixed bottom, CSS grid (1fr auto 1fr auto), 4 columns:
+  - `#hand-section` — col 1, flex, cards overlap left-to-right
+  - `#convict-section` — col 2, fixed-size portrait + stats
+  - `#tactics-section` — col 3, 3 tactic buttons (visible in phase 3.1 only)
+  - `#active-section` — col 3 (same cell as tactics-section), queued skill cards
+  - `#settings-section` — col 4, settings button
+  - Note: tactics-section and active-section share col 3 and swap visibility by phase
 
 **CSS Architecture:**
 - Grid for main layout zones (top/board/bottom)
@@ -124,9 +129,11 @@ Documentation Structure (2026-05-08):
 - `renderConvictPortrait()` → #wd-playbar
 - `renderHandCards()` → #hand-section
 - `renderLeftBar()` → #left-bar
-- `renderActiveStrip()` → #wd-active-strip
+- `renderTacticsStrip()` → #wd-tactics-strip (shows in 3.1, hides active-section)
+- `renderActiveStrip()` → #wd-active-strip (hidden in 3.1, shown otherwise)
 - `renderPhaseStrip()` → #wd-phase-strip
-- `renderSharedDeckTopbar()` → #wd-shared-decks
+- `renderPhaseNotification()` → #phase-notification
+- `renderPhaseActions()` → #phase-actions
 
 **Interaction Model:**
 - Click convict in left-bar → toggles active convict
@@ -243,19 +250,30 @@ python3 -m http.server 8080  # macOS/Linux
 ## Game Rules (Implemented)
 
 **Round Structure:**
-- `start-round` → `event-phase` → `select-cards` → `fast-cards` → `enemy-phase` → `slow-cards` → `end-round`
+- `upkeep` → `events` → `tactics` → `fast-skills` → `enemy-phase` → `slow-skills` → `end-round`
+
+**Phase Completion:**
+- All phases: each convict must individually mark phase complete before phase advances
+- `phaseComplete: boolean[]` tracks per-convict completion; all must be true to advance
+- `convictSubphases: string[]` tracks per-convict subphase within a phase
+
+**Tactics Phase (3):**
+- Subphase 3.1 `select-tactic`: tactics-section shown (active-section hidden); convict picks one tactic; completion button disabled until tactic selected
+- Subphase 3.2 `select-skill-cards`: active-section shown (tactics-section hidden); cards highlighted, click moves to active queue
+- Tactic selection: `convict.selectedTacticId` (string | null); toggled by clicking same button; reset each round on `upkeep` entry
+- Stub tactics defined in `renderTacticsStrip()` (Charge / Guard / Retreat); real tactics go in `convictDef.tactics[]` in core-set.json when content is ready
 
 **Card Flow:**
-- Skill cards selected only during `select-cards`
-- `fast` skills queue in `activeCards.fastSkills`, resolve in `fast-cards`
-- `slow` skills queue in `activeCards.slowSkills`, resolve in `slow-cards`
+- Skill cards selected only during tactics 3.2 (`select-skill-cards`)
+- `fast` skills queue in `activeCards.fastSkills`, resolve in `fast-skills`
+- `slow` skills queue in `activeCards.slowSkills`, resolve in `slow-skills`
 - Queued skills discard at `end-round`
 - Common skill cards enter hand immediately when taken from deck
 - Discarded cards return to that convict's discard pile, enter redraw loop
 - Convict hand cap: 8 cards
 
 **Automation:**
-- `event-phase` entry: auto-draw one event card per convict to active area
+- `events` entry: auto-draw one event card per convict to active area
 - Dice rolling: automated
 - Deck flow: automated (draw/discard management)
 - Effects: structured descriptors, not code
