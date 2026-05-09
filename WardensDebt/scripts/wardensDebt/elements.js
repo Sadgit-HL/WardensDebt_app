@@ -780,6 +780,7 @@ export function initElements() {
   activeSection?.addEventListener('click', handleContainerClick);
   leftBar?.addEventListener('click', handleContainerClick);
   topBar?.addEventListener('click', handleContainerClick);
+  document.getElementById('settings-section')?.addEventListener('click', handleContainerClick);
 
   const popover = document.getElementById('wd-popover');
   popover?.addEventListener('click', event => {
