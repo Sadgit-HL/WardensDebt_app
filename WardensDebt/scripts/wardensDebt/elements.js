@@ -217,6 +217,24 @@ function renderEnemyStrip(runtime) {
       </div>
     </div>
   `).join('');
+
+  strip.querySelectorAll('.wd-enemy-thumb-wrapper').forEach(wrapper => {
+    wrapper.addEventListener('mouseenter', (e) => {
+      const hoverBox = wrapper.querySelector('.wd-enemy-thumb-hover');
+      if (!hoverBox) return;
+      const rect = hoverBox.getBoundingClientRect();
+      const overflow = rect.right - window.innerWidth + 8;
+      if (overflow > 0) {
+        hoverBox.style.left = `${-overflow}px`;
+      } else {
+        hoverBox.style.left = '0';
+      }
+    });
+    wrapper.addEventListener('mouseleave', () => {
+      const hoverBox = wrapper.querySelector('.wd-enemy-thumb-hover');
+      if (hoverBox) hoverBox.style.left = '0';
+    });
+  });
 }
 
 function renderLoading(playbar) {
