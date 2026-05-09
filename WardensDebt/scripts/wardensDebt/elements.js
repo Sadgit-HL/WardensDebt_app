@@ -405,6 +405,14 @@ function renderActiveStrip(runtime) {
   activeStrip.innerHTML = queuedSkillSections(runtime);
 }
 
+function renderSettingsButton(runtime) {
+  const section = document.getElementById('settings-section');
+  if (!section) return;
+  section.innerHTML = `
+    <button class="wd-settings-btn" data-wd-action="open-settings" title="Settings" aria-label="Settings">⚙</button>
+  `;
+}
+
 function renderInfoPanel() {
   const panel = document.getElementById('info-panel');
   if (!panel) return;
@@ -577,6 +585,7 @@ export function renderElements() {
   renderSkillStrip(runtime);
   renderDeckStrip(runtime);
   renderActiveStrip(runtime);
+  renderSettingsButton(runtime);
   renderObjectPopover(runtime);
   renderPhaseStrip(runtime);
   renderDiceTray(runtime);
@@ -589,6 +598,11 @@ function handleAction(actionButton) {
 
   if (action === 'open-add') {
     openAddPanel();
+    return;
+  }
+
+  if (action === 'open-settings') {
+    console.log('Settings button clicked');
     return;
   }
 
