@@ -421,11 +421,14 @@ function renderObjectPopover(runtime) {
 
   if (uiState.emptyClickMenu) {
     const { clientX, clientY } = uiState.emptyClickMenu;
-    const W = 320;
+    const W = 48;
     const left = Math.max(8, Math.min(clientX - W / 2, window.innerWidth - W - 8));
     const top = Math.max(8, clientY + 8);
-    popover.style.cssText = `display:block;left:${left}px;top:${top}px;width:${W}px;max-height:70vh;overflow-y:auto;`;
-    popover.innerHTML = addPanel();
+    popover.style.cssText = `display:block;left:${left}px;top:${top}px;width:${W}px;`;
+    popover.innerHTML = `
+      <div class="wd-ctx-menu">
+        <button class="wd-ctx-item" data-wd-action="open-add" title="Add figure">+</button>
+      </div>`;
     return;
   }
 
