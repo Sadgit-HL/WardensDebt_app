@@ -51,7 +51,7 @@ body {
   right: 0;
   height: auto;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   background: rgba(10 10 30 / 0.82);
   backdrop-filter: blur(8px);
@@ -61,16 +61,24 @@ body {
   z-index: 20;
 }
 
-#wd-left-strips {
+#wd-monster-strip {
   grid-column: 1;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+#wd-center-strips {
+  grid-column: 2;
+  justify-self: center;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
 #wd-phase-strip {
-  grid-column: 2;
-  justify-self: center;
+  display: flex;
+  align-items: center;
 }
 
 #wd-right-strips {
@@ -130,6 +138,56 @@ body {
 .wd-left-bar-add:hover {
   background: rgba(0, 0, 0, 0.75);
   color: #fff;
+}
+
+/* Monster strip: thumbnails and hover infobox */
+.wd-monster-thumb-wrapper {
+  position: relative;
+}
+
+.wd-monster-thumb {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  border: 1px solid rgba(255 255 255 / 0.15);
+  background: rgba(10 10 30 / 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(255 255 255 / 0.8);
+  transition: border-color 0.2s, background 0.2s;
+  padding: 0 4px;
+}
+
+.wd-monster-thumb:hover {
+  border-color: rgba(255 255 255 / 0.35);
+  background: rgba(10 10 30 / 0.95);
+}
+
+.wd-monster-thumb-hover {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 160px;
+  max-width: 220px;
+  background: rgba(10, 10, 30, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 10px 12px;
+  z-index: 50;
+  backdrop-filter: blur(10px);
+  color: #fff;
+  pointer-events: none;
+}
+
+.wd-monster-thumb-wrapper:hover .wd-monster-thumb-hover {
+  display: block;
 }
 
 /* Info panel: fixed to right-center, overlay */

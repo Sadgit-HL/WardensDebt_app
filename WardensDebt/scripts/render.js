@@ -206,19 +206,15 @@ function renderWardensDebtMap() {
   const runtime = getWardensDebtRuntime();
   if (runtime.status !== 'ready' || !runtime.gameState || !runtime.index) return;
 
-  const boardTiles = runtime.gameState.board?.mapTiles || [];
-  if (!boardTiles.length) return;
+  const group = document.createElementNS(SVG_NS, 'g');
+  group.setAttribute('class', 'wd-map');
 
+  const boardTiles = runtime.gameState.board?.mapTiles || [];
   const resolvedTiles = boardTiles.map((boardTile, idx) => {
     const base = wardensDebtMapTileForId(boardTile.id);
     if (!base) return null;
     return { ...base, ...boardTile, idx };
   }).filter(Boolean);
-
-  if (!resolvedTiles.length) return;
-
-  const group = document.createElementNS(SVG_NS, 'g');
-  group.setAttribute('class', 'wd-map');
 
   resolvedTiles.forEach(tile => {
     const tileH = tile.width * tile.naturalHeight / tile.naturalWidth;
@@ -339,5 +335,7 @@ function renderWardensDebtMap() {
     group.appendChild(marker);
   });
 
-  layerTiles.appendChild(group);
+  if (group.hasChildNodes()) {
+    layerTiles.appendChild(group);
+  }
 }

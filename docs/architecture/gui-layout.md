@@ -10,14 +10,14 @@ Full-viewport board-centric layout with transparent overlays. Game board (SVG) c
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│ TOP-BAR  (fixed top, full width, CSS grid: 1fr auto 1fr)             │
-│ ┌─────────────────┬──────────────────────┬────────────────────────┐  │
-│ │ wd-left-strips  │   wd-phase-strip      │     wd-right-strips    │  │
-│ │ • counter-strip │  (always centered)    │ • wd-skill-strip  │   │  │
-│ │   Doom / Debt   │  Planning Phase  ‹ ›  │ • wd-deck-strip       │  │
-│ │                 │                       │   Monster│Event│Item│  │  │
-│ │                 │                       │   Location│Agenda│Mis│  │  │
-│ └─────────────────┴──────────────────────┴────────────────────────┘  │
+│ TOP-BAR  (fixed top, full width, CSS grid: auto 1fr auto)            │
+│ ┌────────────────┬──────────────────────┬────────────────────────┐   │
+│ │ wd-monster-    │  wd-center-strips    │   wd-right-strips      │   │
+│ │ strip          │  • wd-phase-strip    │ • wd-skill-strip       │   │
+│ │ • Enemy types  │    Planning Phase ‹› │ • wd-deck-strip        │   │
+│ │   hover info   │  • wd-counter-strip  │   Monster│Event│Item│  │   │
+│ │                │    Doom / Debt       │   Location│Agenda│Mis│   │   │
+│ └────────────────┴──────────────────────┴────────────────────────┘   │
 ├──────────────────────────────────────────────────────────────────────┤
 │                                                                      │
 │  LEFT-BAR (fixed left,           BOARD (SVG, full viewport)          │
@@ -49,15 +49,16 @@ Full-viewport board-centric layout with transparent overlays. Game board (SVG) c
   <!-- Full-viewport board -->
   <svg id="board-svg">...</svg>
 
-  <!-- Fixed top bar (CSS grid: 1fr auto 1fr) -->
+  <!-- Fixed top bar (CSS grid: auto 1fr auto) -->
   <div id="top-bar">
-    <div id="wd-left-strips">
-      <div id="wd-counter-strip"></div>   <!-- Doom / Debt -->
+    <div id="wd-monster-strip"></div>     <!-- Monster type references (left) -->
+    <div id="wd-center-strips">
+      <div id="wd-phase-strip"></div>     <!-- Phase navigation: center -->
+      <div id="wd-counter-strip"></div>   <!-- Doom / Debt counters: center -->
     </div>
-    <div id="wd-phase-strip"></div>       <!-- center: always locked -->
     <div id="wd-right-strips">
-      <div id="wd-skill-strip"></div>     <!-- Common skill deck -->
-      <div id="wd-deck-strip"></div>      <!-- Monster/Event/Item/Location/Agenda/Mission -->
+      <div id="wd-skill-strip"></div>     <!-- Common skill deck (right) -->
+      <div id="wd-deck-strip"></div>      <!-- Monster/Event/Item/Location/Agenda/Mission (right) -->
     </div>
   </div>
 
@@ -135,8 +136,27 @@ Full-viewport board-centric layout with transparent overlays. Game board (SVG) c
 
 ### Component Layouts (CSS Grid + Flexbox)
 ```css
-/* Top bar and player-ui both use the same centering trick */
-#top-bar,
+/* Top bar: left-aligned monster strip | centered phase+counter | right-aligned skill+deck */
+#top-bar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;  /* left | center | right */
+  align-items: center;
+}
+
+#wd-monster-strip {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+#wd-center-strips {
+  justify-self: center;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Player-ui keeps the original 3-column centering pattern */
 #player-ui {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -176,11 +196,23 @@ Full-viewport board-centric layout with transparent overlays. Game board (SVG) c
 ### #top-bar (Top Edge)
 - **Position:** Fixed top, full-width
 - **Background:** Semi-transparent with backdrop-filter blur
-- **Layout:** CSS grid `1fr auto 1fr` — left/center/right columns
+- **Layout:** CSS grid `auto 1fr auto` — left-aligned | center | right-aligned columns
 - **Content:**
-  - Left (`#wd-left-strips`): `#wd-counter-strip` — Doom/Debt counters with ±
-  - Center (`#wd-phase-strip`): current phase name + ‹/›/R+ navigation; always centered
-  - Right (`#wd-right-strips`): `#wd-skill-strip` (common skill deck) + `#wd-deck-strip` (Monster/Event/Item/Location/Agenda/Mission); vertical separators after skill, monster, event, item, location
+  - Left (`#wd-monster-strip`): Enemy type reference thumbnails with hover infobox (name, HP, attack)
+  - Center (`#wd-center-strips`): 
+    - `#wd-phase-strip` — current phase name + ‹/›/R+ navigation
+    - `#wd-counter-strip` — Doom/Debt counters with ±
+  - Right (`#wd-right-strips`):
+    - `#wd-skill-strip` (common skill deck)
+    - `#wd-deck-strip` (Monster/Event/Item/Location/Agenda/Mission decks); vertical separators after skill, monster, event, item, location
+
+### #wd-monster-strip (Monster Type Reference)
+- **Position:** Top-bar left section
+- **Content:** Thumbnail for each unique enemy type currently on the board
+- **Display:** Abbreviated name (first 3 chars) in compact 40×40 box
+- **Interaction:** Hover shows infobox below with full name, HP, and attack values
+- **Pattern:** Same hover-infobox pattern as active-cards in deck-strip
+- **Purpose:** Quick reference of monster behavior rules during planning phases
 
 ### #left-bar-wrapper (Left Overlay)
 - **Position:** Fixed left; `bottom` = `--player-ui-height` (tracks player-UI top edge via ResizeObserver)
@@ -239,13 +271,14 @@ Each zone has a dedicated renderer function in `elements.js`:
 renderElements() → {
   renderConvictPortrait()   // #wd-playbar
   renderHandCards()         // #hand-section
-  renderLeftBar()           // #left-bar (thumbnails + + button)
-  renderActiveStrip()       // #wd-active-strip
-  renderObjectPopover()     // #wd-popover (convict / enemy / map tile)
-  renderPhaseStrip()        // #wd-phase-strip
+  renderLeftBar()           // #left-bar (convict thumbnails + + button)
+  renderMonsterStrip()      // #wd-monster-strip (enemy type references)
   renderCounterStrip()      // #wd-counter-strip
   renderSkillStrip()        // #wd-skill-strip
   renderDeckStrip()         // #wd-deck-strip
+  renderActiveStrip()       // #wd-active-strip
+  renderObjectPopover()     // #wd-popover (convict / enemy / map tile)
+  renderPhaseStrip()        // #wd-phase-strip
   renderDiceTray()          // dice pool
   renderInfoPanel()         // #info-panel (add-figure panel or empty)
 }

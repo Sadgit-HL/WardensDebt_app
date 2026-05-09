@@ -184,6 +184,41 @@ function renderLeftBar(runtime) {
   leftBar.innerHTML = html + `<button class="wd-left-bar-add" data-wd-action="open-add" title="Add figure">+</button>`;
 }
 
+function renderMonsterStrip(runtime) {
+  const strip = document.getElementById('wd-monster-strip');
+  if (!strip) return;
+
+  const enemies = runtime.gameState?.enemies || [];
+  if (enemies.length === 0) {
+    strip.innerHTML = '';
+    return;
+  }
+
+  const seenDefIds = new Set();
+  const uniqueEnemies = [];
+
+  for (const enemy of enemies) {
+    if (!seenDefIds.has(enemy.monsterDefId)) {
+      seenDefIds.add(enemy.monsterDefId);
+      const def = runtime.index?.monsterDefsById?.get(enemy.monsterDefId);
+      if (def) {
+        uniqueEnemies.push({ ...def, id: enemy.monsterDefId });
+      }
+    }
+  }
+
+  strip.innerHTML = uniqueEnemies.map(def => `
+    <div class="wd-monster-thumb-wrapper">
+      <div class="wd-monster-thumb">${escapeHtml((def.name || def.id).slice(0, 3))}</div>
+      <div class="wd-monster-thumb-hover">
+        <div class="wd-hover-title">${escapeHtml(def.name || def.id)}</div>
+        <div class="wd-hover-text">HP: ${def.health ?? '—'}</div>
+        <div class="wd-hover-text">ATK: ${def.attack ?? '—'}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
 function renderLoading(playbar) {
   playbar.innerHTML = `
     <div class="wd-playbar wd-playbar--status">
@@ -493,6 +528,7 @@ export function renderElements() {
     renderLoading(playbar);
     renderHandCards(runtime);
     renderLeftBar(runtime);
+    renderMonsterStrip(runtime);
     renderCounterStrip(runtime);
     renderSkillStrip(runtime);
     renderDeckStrip(runtime);
@@ -508,6 +544,7 @@ export function renderElements() {
     renderError(playbar, runtime);
     renderHandCards(runtime);
     renderLeftBar(runtime);
+    renderMonsterStrip(runtime);
     renderCounterStrip(runtime);
     renderSkillStrip(runtime);
     renderDeckStrip(runtime);
@@ -522,6 +559,7 @@ export function renderElements() {
   renderConvictPortrait(playbar, runtime);
   renderHandCards(runtime);
   renderLeftBar(runtime);
+  renderMonsterStrip(runtime);
   renderCounterStrip(runtime);
   renderSkillStrip(runtime);
   renderDeckStrip(runtime);
