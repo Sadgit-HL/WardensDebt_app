@@ -301,22 +301,13 @@ function resolveWardensDebtQueuedSkillCards(nextState, contentIndex, queueName, 
     }
 
     const logEntries = [`${convict.name} resolved ${queuedCard.cardId}`];
-    let testEncountered = false;
+    const hasTestEffect = card.effects.some(e => e.type === 'test');
+    if (hasTestEffect) {
+      logEntries.push(`${convict.name} is ready to trigger a test (click card to start)`);
+      nextState.log = [...nextState.log, ...logEntries];
+      continue;
+    }
     for (const effect of card.effects) {
-      if (effect.type === 'test') {
-        nextState.activeTest = {
-          convictIndex: queuedCard.convictIndex,
-          difficulty: effect.difficulty || 0,
-          description: effect.description || 'Test',
-          successEffects: effect.successEffects || [],
-          failEffects: effect.failEffects || [],
-          modifier: 0,
-          sourceCardId: queuedCard.cardId,
-        };
-        logEntries.push(`${convict.name} encountered a test (difficulty ${effect.difficulty})`);
-        testEncountered = true;
-        break;
-      }
       applySkillEffect(nextState, convict, effect, logEntries, { enemyIndex: 0, dieIndex: 0 }, randomIntInclusive);
     }
 
@@ -324,10 +315,6 @@ function resolveWardensDebtQueuedSkillCards(nextState, contentIndex, queueName, 
       ...nextState.log,
       ...logEntries,
     ];
-
-    if (testEncountered) {
-      return resolvedCards;
-    }
 
     queuedCard.resolved = true;
     resolvedCards.push({

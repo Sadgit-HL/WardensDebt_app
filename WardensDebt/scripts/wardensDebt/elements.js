@@ -134,17 +134,18 @@ function queuedSkillSections(runtime) {
 
     const cardsHtml = entries.map(({ qc: queuedCard, realIndex }) => {
       const card = cardDetails(runtime, queuedCard.cardId);
-      const isTestCard = hasActiveTest && runtime.gameState.activeTest?.sourceCardId === queuedCard.cardId;
+      const hasTestEffect = card?.effects?.some(e => e.type === 'test');
+      const isTestPending = hasActiveTest && runtime.gameState.activeTest?.sourceCardId === queuedCard.cardId;
 
-      const returnBtn = canUnplay && !isTestCard
+      const returnBtn = canUnplay && !hasTestEffect
         ? `<button class="wd-active-card-return" data-wd-action="unplay-card" data-queue-name="${escapeHtml(config.key)}" data-queue-index="${realIndex}" title="Return to hand">&#8592;</button>`
         : '';
 
-      const cardAttrs = isTestCard
-        ? `data-wd-action="resolve-test"`
+      const cardAttrs = hasTestEffect
+        ? `data-wd-action="trigger-test" data-queue-name="${escapeHtml(config.key)}" data-queue-index="${realIndex}"`
         : (canDiscard ? `data-wd-action="discard-card" data-queue-name="${escapeHtml(config.key)}" data-queue-index="${realIndex}"` : '');
 
-      const cardClass = isTestCard ? ' is-test-pending' : (canDiscard ? ' is-playable' : '');
+      const cardClass = isTestPending ? ' is-test-pending' : (canDiscard ? ' is-playable' : '');
 
       return `
         <div class="wd-card-hover-wrapper">
@@ -1169,6 +1170,31 @@ function handleAction(actionButton) {
     if (action === 'roll-all-dice') {
       const result = rollWardensDebtDicePool(runtime.gameState, runtime.index);
       setWardensDebtGameState(result.gameState);
+      return;
+    }
+
+    if (action === 'trigger-test') {
+      const queueName = actionButton.dataset.queueName;
+      const queueIndex = Number(actionButton.dataset.queueIndex);
+      const queue = runtime.gameState.activeCards?.[queueName];
+      const queuedCard = queue?.[queueIndex];
+      if (!queuedCard) return;
+
+      const card = cardDetails(runtime, queuedCard.cardId);
+      const testEffect = card?.effects?.find(e => e.type === 'test');
+      if (!testEffect) return;
+
+      const nextState = structuredClone(runtime.gameState);
+      nextState.activeTest = {
+        convictIndex: queuedCard.convictIndex,
+        difficulty: testEffect.difficulty || 0,
+        description: testEffect.description || 'Test',
+        successEffects: testEffect.successEffects || [],
+        failEffects: testEffect.failEffects || [],
+        modifier: 0,
+        sourceCardId: queuedCard.cardId,
+      };
+      setWardensDebtGameState(nextState);
       return;
     }
 
