@@ -290,6 +290,32 @@ export const ACTIONS = {
     return { ...gameState, decks: nextDecks, convicts: nextConvicts };
   },
 
+  // ─── Test Resolution ──────────────────────────────────────────────────────────
+
+  'add-test-modifier': (gameState, { convictIndex, handIndex, modifierAmount }) => {
+    const convict = (gameState.convicts || [])[convictIndex];
+    const test = gameState.activeTest;
+    if (!convict || !test || !Number.isInteger(handIndex)) return gameState;
+
+    const nextConvicts = [...gameState.convicts];
+    const nextHand = [...convict.hand];
+    const cardId = nextHand.splice(handIndex, 1)[0];
+    if (!cardId) return gameState;
+
+    const nextConvict = {
+      ...convict,
+      hand: nextHand,
+      discardPile: [...convict.discardPile, cardId],
+    };
+    nextConvicts[convictIndex] = nextConvict;
+
+    return {
+      ...gameState,
+      convicts: nextConvicts,
+      activeTest: { ...test, modifier: test.modifier + modifierAmount },
+    };
+  },
+
   // ─── Phase Completion ────────────────────────────────────────────────────────
 
   'complete-phase': (gameState, { convictIndex }) => {

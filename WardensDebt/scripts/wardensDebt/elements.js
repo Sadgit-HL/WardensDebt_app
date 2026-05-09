@@ -11,6 +11,8 @@ import {
   rollWardensDebtDicePool,
   retreatWardensDebtPhase,
   startNextWardensDebtRound,
+  resolveWardensDebtTestAndContinue,
+  calculateWardensDebtDiceTotal,
   WARDENS_DEBT_PHASE_SEQUENCE,
 } from './gameplay.js';
 import { PHASE_CONFIG } from './schema.js';
@@ -117,8 +119,9 @@ function queuedSkillSections(runtime) {
 
   const phase = runtime.gameState.turn?.phase;
   const subphase = runtime.gameState.turn?.subphase;
-  const canUnplay = subphase === 'select-skill-cards';
-  const canDiscardFast = phase === 'fast-skills';
+  const hasActiveTest = runtime.gameState?.activeTest !== null;
+  const canUnplay = subphase === 'select-skill-cards' && !hasActiveTest;
+  const canDiscardFast = phase === 'fast-skills' && !hasActiveTest;
 
   return queueConfigs.map(config => {
     const fullQueue = runtime.gameState.activeCards?.[config.key] || [];
@@ -131,15 +134,21 @@ function queuedSkillSections(runtime) {
 
     const cardsHtml = entries.map(({ qc: queuedCard, realIndex }) => {
       const card = cardDetails(runtime, queuedCard.cardId);
-      const returnBtn = canUnplay
+      const isTestCard = hasActiveTest && runtime.gameState.activeTest?.sourceCardId === queuedCard.cardId;
+
+      const returnBtn = canUnplay && !isTestCard
         ? `<button class="wd-active-card-return" data-wd-action="unplay-card" data-queue-name="${escapeHtml(config.key)}" data-queue-index="${realIndex}" title="Return to hand">&#8592;</button>`
         : '';
-      const discardAttrs = canDiscard
-        ? `data-wd-action="discard-card" data-queue-name="${escapeHtml(config.key)}" data-queue-index="${realIndex}"`
-        : '';
+
+      const cardAttrs = isTestCard
+        ? `data-wd-action="resolve-test"`
+        : (canDiscard ? `data-wd-action="discard-card" data-queue-name="${escapeHtml(config.key)}" data-queue-index="${realIndex}"` : '');
+
+      const cardClass = isTestCard ? ' is-test-pending' : (canDiscard ? ' is-playable' : '');
+
       return `
         <div class="wd-card-hover-wrapper">
-          <article class="wd-active-card${canDiscard ? ' is-playable' : ''}" ${discardAttrs}>
+          <article class="wd-active-card${cardClass}" ${cardAttrs}>
             ${returnBtn}
             <div class="wd-active-card-type">${escapeHtml(config.label)}</div>
             <div class="wd-active-card-title">${escapeHtml(card?.name || queuedCard.cardId)}</div>
@@ -313,9 +322,8 @@ function renderDiceTray(runtime) {
   }
 
   const dicePool = runtime.gameState.dicePool || [];
-  const diceTotal = dicePool.reduce((total, dieState) => {
-    return total + (Number.isInteger(dieState.currentValue) ? dieState.currentValue : 0);
-  }, 0);
+  const diceTotal = calculateWardensDebtDiceTotal(runtime.gameState);
+  const activeTest = runtime.gameState.activeTest;
 
   const diceHtml = dicePool.map((dieState, dieIndex) => `
     <button class="wd-tray-die" type="button" data-wd-action="roll-die" data-die-index="${dieIndex}" title="Roll ${escapeHtml(dieState.dieId)}" aria-label="Roll ${escapeHtml(dieState.dieId)}">
@@ -323,10 +331,22 @@ function renderDiceTray(runtime) {
     </button>
   `).join('');
 
+  const testContext = activeTest ? `
+    <div class="wd-test-context">
+      <div class="wd-test-label">${escapeHtml(activeTest.description)}</div>
+      <div class="wd-test-info">
+        <span>Difficulty: ${activeTest.difficulty}</span>
+        <span>Total: ${diceTotal}${activeTest.modifier ? ` + ${activeTest.modifier}` : ''} = ${diceTotal + activeTest.modifier}</span>
+      </div>
+      <button class="wd-test-resolve" type="button" data-wd-action="resolve-test">Resolve Test</button>
+    </div>
+  ` : '';
+
   diceTray.innerHTML = `
     <div class="wd-tray-total" title="Dice total">${diceTotal}</div>
     ${diceHtml || '<div class="wd-tray-empty">No dice</div>'}
     ${dicePool.length ? '<button class="wd-tray-roll-all" type="button" data-wd-action="roll-all-dice" title="Roll all dice">Roll</button>' : ''}
+    ${testContext}
   `;
 }
 
@@ -355,8 +375,8 @@ function renderPhaseActions(runtime) {
   const panel = document.getElementById('phase-actions');
   if (!panel) return;
 
-  // Hide phase-actions when add panel is open
-  if (uiState.addPanelOpen) {
+  // Hide phase-actions when add panel is open or test is pending
+  if (uiState.addPanelOpen || (runtime.gameState?.activeTest)) {
     panel.innerHTML = '';
     return;
   }
@@ -1152,6 +1172,26 @@ function handleAction(actionButton) {
       return;
     }
 
+    if (action === 'resolve-test') {
+      if (!runtime.gameState.activeTest) return;
+      const { gameState: nextState } = resolveWardensDebtTestAndContinue(runtime.gameState, runtime.index);
+      setWardensDebtGameState(nextState);
+      return;
+    }
+
+    if (action === 'add-test-modifier') {
+      if (!runtime.gameState.activeTest) return;
+      const handIndex = Number(actionButton.dataset.handIndex);
+      const modifierAmount = Number(actionButton.dataset.modifierAmount);
+      if (!Number.isInteger(handIndex) || !Number.isInteger(modifierAmount)) return;
+      updateWardensDebtGameStateViaAction('add-test-modifier', {
+        convictIndex: activeConvictIndex,
+        handIndex,
+        modifierAmount,
+      });
+      return;
+    }
+
     if (action === 'play-card') {
       const handIndex = Number(actionButton.dataset.handIndex);
       const result = playWardensDebtSkillCard(
@@ -1166,6 +1206,7 @@ function handleAction(actionButton) {
     }
 
     if (action === 'unplay-card') {
+      if (runtime.gameState?.activeTest) return;
       const queueName = actionButton.dataset.queueName;
       const queueIndex = Number(actionButton.dataset.queueIndex);
       if (!queueName || !Number.isInteger(queueIndex)) return;
@@ -1181,6 +1222,7 @@ function handleAction(actionButton) {
     }
 
     if (action === 'discard-card') {
+      if (runtime.gameState?.activeTest) return;
       const queueName = actionButton.dataset.queueName;
       const queueIndex = Number(actionButton.dataset.queueIndex);
       if (!queueName || !Number.isInteger(queueIndex)) return;

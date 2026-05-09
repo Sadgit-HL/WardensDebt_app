@@ -245,6 +245,42 @@
           "conditionId": "marked"
         }
       ]
+    },
+    {
+      "id": "common-strength-test",
+      "name": "Strength Test",
+      "role": "common",
+      "timing": "fast",
+      "cost": 0,
+      "text": "Roll dice. On success (≥8): deal 3 damage. On fail: gain 1 guard.",
+      "tags": [
+        "common",
+        "test",
+        "print",
+        "component:card"
+      ],
+      "effects": [
+        {
+          "type": "test",
+          "target": "self",
+          "description": "Strength Test",
+          "difficulty": 8,
+          "successEffects": [
+            {
+              "type": "deal_damage",
+              "target": "enemy",
+              "amount": 3
+            }
+          ],
+          "failEffects": [
+            {
+              "type": "gain_guard",
+              "target": "self",
+              "amount": 1
+            }
+          ]
+        }
+      ]
     }
   ],
   "convictDefs": [
@@ -510,7 +546,7 @@
       "cardIds": [
         "common-brawler-swing",
         "common-brawler-protect",
-        "common-TEST"
+        "common-strength-test"
       ]
     },
     {

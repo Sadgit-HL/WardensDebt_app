@@ -47,6 +47,8 @@ const EFFECT_TYPES = new Set([
   'summon_unit',
   'apply_condition',
   'roll_die',
+  'test',
+  'modify_test',
 ]);
 const TURN_SIDES = new Set(['convicts', 'enemies']);
 const SKILL_TIMINGS = new Set(['fast', 'slow']);
@@ -806,6 +808,7 @@ export function createWardensDebtGameState(content, scenarioId) {
       discard: [],
       banished: [],
     },
+    activeTest: null,
     log: [],
   };
 }

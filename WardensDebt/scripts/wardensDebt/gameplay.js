@@ -292,8 +292,8 @@ function resolveWardensDebtQueuedSkillCards(nextState, contentIndex, queueName, 
   }
 
   const resolvedCards = [];
-  queue.forEach(queuedCard => {
-    if (queuedCard.resolved) return;
+  for (const queuedCard of queue) {
+    if (queuedCard.resolved) continue;
     const convict = resolveQueuedSkillConvict(nextState, queuedCard);
     const card = contentIndex?.skillDefsById.get(queuedCard.cardId);
     if (!card) {
@@ -301,19 +301,40 @@ function resolveWardensDebtQueuedSkillCards(nextState, contentIndex, queueName, 
     }
 
     const logEntries = [`${convict.name} resolved ${queuedCard.cardId}`];
+    let testEncountered = false;
     for (const effect of card.effects) {
+      if (effect.type === 'test') {
+        nextState.activeTest = {
+          convictIndex: queuedCard.convictIndex,
+          difficulty: effect.difficulty || 0,
+          description: effect.description || 'Test',
+          successEffects: effect.successEffects || [],
+          failEffects: effect.failEffects || [],
+          modifier: 0,
+          sourceCardId: queuedCard.cardId,
+        };
+        logEntries.push(`${convict.name} encountered a test (difficulty ${effect.difficulty})`);
+        testEncountered = true;
+        break;
+      }
       applySkillEffect(nextState, convict, effect, logEntries, { enemyIndex: 0, dieIndex: 0 }, randomIntInclusive);
     }
+
     nextState.log = [
       ...nextState.log,
       ...logEntries,
     ];
+
+    if (testEncountered) {
+      return resolvedCards;
+    }
+
     queuedCard.resolved = true;
     resolvedCards.push({
       convictIndex: queuedCard.convictIndex,
       cardId: queuedCard.cardId,
     });
-  });
+  }
 
   return resolvedCards;
 }
@@ -388,6 +409,51 @@ function setWardensDebtPhase(nextState, contentIndex, phase, round, triggerAutom
     logEntries,
     automationResult,
   };
+}
+
+function resolveWardensDebtTest(gameState, contentIndex, randomIntInclusive = defaultRandomIntInclusive) {
+  const test = gameState.activeTest;
+  if (!test) return { gameState, log: [] };
+
+  const total = calculateWardensDebtDiceTotal(gameState) + test.modifier;
+  const succeeded = total >= test.difficulty;
+  const effects = succeeded ? test.successEffects : test.failEffects;
+
+  const nextState = { ...gameState, activeTest: null };
+  const logEntries = [
+    `Test "${test.description}": rolled ${total - test.modifier} + modifier ${test.modifier} = ${total} vs difficulty ${test.difficulty} → ${succeeded ? 'SUCCESS' : 'FAIL'}`,
+  ];
+
+  const convict = nextState.convicts?.[test.convictIndex];
+  if (!convict) return { gameState: nextState, log: logEntries };
+
+  for (const effect of effects) {
+    applySkillEffect(nextState, convict, effect, logEntries, { enemyIndex: 0, dieIndex: 0 }, randomIntInclusive);
+  }
+
+  const queue = nextState.activeCards?.fastSkills || [];
+  for (const entry of queue) {
+    if (entry.cardId === test.sourceCardId && entry.convictIndex === test.convictIndex) {
+      entry.resolved = true;
+    }
+  }
+  const slowQueue = nextState.activeCards?.slowSkills || [];
+  for (const entry of slowQueue) {
+    if (entry.cardId === test.sourceCardId && entry.convictIndex === test.convictIndex) {
+      entry.resolved = true;
+    }
+  }
+
+  return { gameState: nextState, log: logEntries };
+}
+
+export function resolveWardensDebtTestAndContinue(gameState, contentIndex) {
+  const { gameState: nextState, log: testLog } = resolveWardensDebtTest(gameState, contentIndex);
+  if (!nextState.activeTest && nextState.activeCards?.fastSkills) {
+    const result = resolveWardensDebtQueuedSkillCards(nextState, contentIndex, 'fastSkills');
+    return { gameState: nextState, log: [...testLog, ...nextState.log] };
+  }
+  return { gameState: nextState, log: testLog };
 }
 
 export function calculateWardensDebtDiceTotal(gameState) {

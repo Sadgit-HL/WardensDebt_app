@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Runtime</title>
+</head>
+<body>
+  <h1>Testing WD Runtime</h1>
+  <div id="output"></div>
+
+  <script type="module">
+    try {
+      const output = document.getElementById('output');
+      output.innerHTML += '<p>Attempting to import runtime...</p>';
+
+      const { getWardensDebtRuntime, initWardensDebtRuntime } = await import('./scripts/wardensDebt/runtime.js');
+      output.innerHTML += '<p>✓ Runtime imported successfully</p>';
+
+      output.innerHTML += '<p>Attempting to initialize runtime...</p>';
+      const result = await initWardensDebtRuntime();
+      output.innerHTML += '<p>✓ Runtime initialized</p>';
+      output.innerHTML += '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+    } catch (error) {
+      document.getElementById('output').innerHTML += '<p style="color:red">ERROR: ' + error.message + '</p>';
+      console.error(error);
+    }
+  </script>
+</body>
+</html>

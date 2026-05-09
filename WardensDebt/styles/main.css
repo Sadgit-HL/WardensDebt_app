@@ -2774,6 +2774,55 @@ body {
   white-space: nowrap;
 }
 
+.wd-test-context {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-left: 12px;
+  padding: 8px 12px;
+  background: rgba(240 160 64 / 0.12);
+  border: 1px solid rgba(240 160 64 / 0.3);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.wd-test-label {
+  font-weight: 600;
+  color: #fff;
+  text-align: left;
+}
+
+.wd-test-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: rgba(255 255 255 / 0.8);
+  font-size: 11px;
+}
+
+.wd-test-resolve {
+  appearance: none;
+  background: rgba(240 160 64 / 0.25);
+  border: 1px solid rgba(240 160 64 / 0.5);
+  color: #fff;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wd-test-resolve:hover:not(:disabled) {
+  background: rgba(240 160 64 / 0.35);
+  border-color: rgba(240 160 64 / 0.7);
+}
+
+.wd-test-resolve:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .wd-playbar-players {
   display: flex;
   align-items: center;
@@ -2912,6 +2961,19 @@ body {
   border-color: rgba(114, 171, 132, 0.9);
   background:
     linear-gradient(180deg, rgb(114 171 132), rgb(34 22 14));
+}
+
+.wd-active-card.is-test-pending {
+  cursor: pointer;
+  border-color: rgba(240, 160, 64, 0.6);
+  background:
+    linear-gradient(180deg, rgb(100 80 60), rgb(60 40 20));
+}
+
+.wd-active-card.is-test-pending:hover {
+  border-color: rgba(240, 160, 64, 1);
+  background:
+    linear-gradient(180deg, rgb(130 100 70), rgb(80 50 20));
 }
 
 #wd-tactics-strip {
