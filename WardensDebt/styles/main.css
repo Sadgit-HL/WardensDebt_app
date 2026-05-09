@@ -1894,7 +1894,7 @@ body {
 .wd-counter-controls {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .wd-counter-value {
@@ -1905,20 +1905,27 @@ body {
   color: #fff;
 }
 
+.wd-counter-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .wd-counter-btn {
   appearance: none;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   width: 22px;
-  height: 22px;
+  height: 18px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
+  border-radius: 3px;
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
+  padding: 0;
 }
 
 .wd-counter-btn:hover {

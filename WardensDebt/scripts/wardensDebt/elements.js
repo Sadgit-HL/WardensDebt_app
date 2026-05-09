@@ -303,17 +303,21 @@ function renderCounterStrip(runtime) {
     <div class="wd-counter">
       <div class="wd-counter-label">Doom</div>
       <div class="wd-counter-controls">
-        <button class="wd-counter-btn" data-wd-action="adjust-counter" data-counter="doom" data-delta="-1">−</button>
         <div class="wd-counter-value">${doom}</div>
-        <button class="wd-counter-btn" data-wd-action="adjust-counter" data-counter="doom" data-delta="1">+</button>
+        <div class="wd-counter-buttons">
+          <button class="wd-counter-btn" data-wd-action="adjust-counter" data-counter="doom" data-delta="1" title="Increase">↑</button>
+          <button class="wd-counter-btn" data-wd-action="adjust-counter" data-counter="doom" data-delta="-1" title="Decrease">↓</button>
+        </div>
       </div>
     </div>
     <div class="wd-counter">
       <div class="wd-counter-label">Debt</div>
       <div class="wd-counter-controls">
-        <button class="wd-counter-btn" data-wd-action="adjust-counter" data-counter="debt" data-delta="-1">−</button>
         <div class="wd-counter-value">${debt}</div>
-        <button class="wd-counter-btn" data-wd-action="adjust-counter" data-counter="debt" data-delta="1">+</button>
+        <div class="wd-counter-buttons">
+          <button class="wd-counter-btn" data-wd-action="adjust-counter" data-counter="debt" data-delta="1" title="Increase">↑</button>
+          <button class="wd-counter-btn" data-wd-action="adjust-counter" data-counter="debt" data-delta="-1" title="Decrease">↓</button>
+        </div>
       </div>
     </div>
   `;
