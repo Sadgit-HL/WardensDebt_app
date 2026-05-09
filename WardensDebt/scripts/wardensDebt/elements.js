@@ -11,7 +11,9 @@ import {
   rollWardensDebtDicePool,
   retreatWardensDebtPhase,
   startNextWardensDebtRound,
+  WARDENS_DEBT_PHASE_SEQUENCE,
 } from './gameplay.js';
+import { PHASE_CONFIG } from './schema.js';
 import {
   getWardensDebtRuntime,
   setWardensDebtGameState,
@@ -114,8 +116,9 @@ function queuedSkillSections(runtime) {
   ];
 
   const phase = runtime.gameState.turn?.phase;
-  const canUnplay = phase === 'select-cards';
-  const canDiscardFast = phase === 'fast-cards';
+  const subphase = runtime.gameState.turn?.subphase;
+  const canUnplay = subphase === 'select-skill-cards';
+  const canDiscardFast = phase === 'fast-skills';
 
   return queueConfigs.map(config => {
     const fullQueue = runtime.gameState.activeCards?.[config.key] || [];
@@ -124,7 +127,7 @@ function queuedSkillSections(runtime) {
       .filter(({ qc }) => qc.convictIndex === activeConvictIndex);
     if (!entries.length) return '';
 
-    const canDiscard = (canDiscardFast && config.key === 'fastSkills') || (phase === 'slow-cards' && config.key === 'slowSkills');
+    const canDiscard = (canDiscardFast && config.key === 'fastSkills') || (phase === 'slow-skills' && config.key === 'slowSkills');
 
     const cardsHtml = entries.map(({ qc: queuedCard, realIndex }) => {
       const card = cardDetails(runtime, queuedCard.cardId);
@@ -159,6 +162,46 @@ function formatPhaseName(phase) {
     .split('-')
     .map(part => part ? part[0].toUpperCase() + part.slice(1) : '')
     .join(' ');
+}
+
+function formatPhaseDisplay(phase) {
+  return formatPhaseName(phase);
+}
+
+function renderPhaseNotification(runtime) {
+  const panel = document.getElementById('phase-notification');
+  if (!panel) return;
+
+  if (runtime.status !== 'ready' || !runtime.gameState) {
+    panel.innerHTML = '';
+    return;
+  }
+
+  const { phase, convictSubphases } = runtime.gameState.turn;
+  const subphase = convictSubphases?.[activeConvictIndex] || null;
+  const config = PHASE_CONFIG[phase];
+  if (!config?.notification) {
+    panel.innerHTML = '';
+    return;
+  }
+
+  const { title, body } = config.notification;
+  let html = `
+    <div class="wd-notif-card">
+      <div class="wd-notif-title">${escapeHtml(title)}</div>
+      <div class="wd-notif-body">${escapeHtml(body)}</div>
+    </div>`;
+
+  if (subphase && config.subphaseNotifications?.[subphase]) {
+    const sub = config.subphaseNotifications[subphase];
+    html += `
+    <div class="wd-notif-card is-subphase">
+      <div class="wd-notif-title">${escapeHtml(sub.title)}</div>
+      <div class="wd-notif-body">${escapeHtml(sub.body)}</div>
+    </div>`;
+  }
+
+  panel.innerHTML = html;
 }
 
 function renderLeftBar(runtime) {
@@ -296,14 +339,78 @@ function renderPhaseStrip(runtime) {
     return;
   }
 
+  const { phase, phaseComplete } = runtime.gameState.turn;
+  const allDone = phaseComplete.every(done => done);
+  const disabledAttr = !allDone ? 'disabled' : '';
+
   phaseStrip.innerHTML = `
-    <div class="wd-phase-current">${escapeHtml(formatPhaseName(runtime.gameState.turn.phase))}</div>
+    <div class="wd-phase-current">${escapeHtml(formatPhaseDisplay(phase))}</div>
     <div class="wd-phase-buttons">
       <button class="wd-playbar-mini-btn" data-wd-action="phase-prev" title="Previous Phase" aria-label="Previous Phase">‹</button>
-      <button class="wd-playbar-mini-btn" data-wd-action="phase-next" title="Next Phase" aria-label="Next Phase">›</button>
-      <button class="wd-playbar-mini-btn" data-wd-action="round-next" title="Next Round" aria-label="Next Round">R+</button>
+      <button class="wd-playbar-mini-btn" data-wd-action="phase-next" title="Next Phase" aria-label="Next Phase" ${disabledAttr}>›</button>
+      <button class="wd-playbar-mini-btn" data-wd-action="round-next" title="Next Round" aria-label="Next Round" ${disabledAttr}>R+</button>
     </div>
   `;
+}
+
+function renderPhaseActions(runtime) {
+  const panel = document.getElementById('phase-actions');
+  if (!panel) return;
+
+  // Hide phase-actions when add panel is open
+  if (uiState.addPanelOpen) {
+    panel.innerHTML = '';
+    return;
+  }
+
+  if (runtime.status !== 'ready' || !runtime.gameState) {
+    panel.innerHTML = '';
+    return;
+  }
+
+  const { phase, convictSubphases, phaseComplete } = runtime.gameState.turn;
+  const convicts = runtime.gameState.convicts || [];
+
+  let html = '';
+
+  // For non-tactics phases: show single button to mark all convicts done (simultaneous action)
+  if (phase !== 'tactics') {
+    const allDone = phaseComplete.every(done => done);
+    html += `<div class="wd-phase-action-card">
+      <button class="wd-phase-complete-all" data-wd-action="complete-phase-all" ${allDone ? 'disabled' : ''}>Complete Phase</button>
+    </div>`;
+  }
+
+  // For tactics phase only: show subphase buttons for active convict + completion status
+  if (phase === 'tactics') {
+    const activeConvict = convicts[activeConvictIndex];
+
+    // Show subphase button for active convict if not yet done
+    if (activeConvict && !phaseComplete[activeConvictIndex]) {
+      const currentSubphase = convictSubphases[activeConvictIndex];
+      const buttonLabel = currentSubphase === 'select-tactic'
+        ? 'Tactics selected and resolved'
+        : 'Skills selected';
+
+      html += `<div class="wd-phase-action-card">
+        <button class="wd-convict-subphase-next" data-wd-action="complete-subphase" data-convict-index="${activeConvictIndex}">${buttonLabel}</button>
+      </div>`;
+    }
+
+    // Show completion status panel only to the active convict if they are waiting (already completed)
+    const activeConvictIsWaiting = phaseComplete[activeConvictIndex];
+    if (activeConvictIsWaiting) {
+      html += '<div class="wd-phase-action-card"><div class="wd-phase-action-title">Completion</div>';
+      convicts.forEach((convict, idx) => {
+        const done = phaseComplete[idx];
+        const checkmark = done ? ' ✓' : '';
+        html += `<div class="wd-completion-status">${escapeHtml(convict.name || `Convict ${idx + 1}`)}${checkmark}</div>`;
+      });
+      html += '</div>';
+    }
+  }
+
+  panel.innerHTML = html;
 }
 
 function renderCounterStrip(runtime) {
@@ -594,7 +701,7 @@ function renderHandCards(runtime) {
     return;
   }
 
-  const canPlay = runtime.gameState.turn.phase === 'select-cards';
+  const canPlay = runtime.gameState.turn.convictSubphases[activeConvictIndex] === 'select-skill-cards';
 
   const handCards = convict.hand.map((cardId, handIndex) => {
     const card = cardDetails(runtime, cardId);
@@ -654,6 +761,8 @@ export function renderElements() {
     renderActiveStrip(runtime);
     renderObjectPopover(runtime);
     renderPhaseStrip(runtime);
+    renderPhaseNotification(runtime);
+    renderPhaseActions(runtime);
     renderDiceTray(runtime);
     renderInfoPanel();
     return;
@@ -670,6 +779,8 @@ export function renderElements() {
     renderActiveStrip(runtime);
     renderObjectPopover(runtime);
     renderPhaseStrip(runtime);
+    renderPhaseNotification(runtime);
+    renderPhaseActions(runtime);
     renderDiceTray(runtime);
     renderInfoPanel();
     return;
@@ -687,6 +798,8 @@ export function renderElements() {
   renderSettingsModal(runtime);
   renderObjectPopover(runtime);
   renderPhaseStrip(runtime);
+  renderPhaseNotification(runtime);
+  renderPhaseActions(runtime);
   renderDiceTray(runtime);
   renderInfoPanel();
 }
@@ -755,6 +868,92 @@ function handleAction(actionButton) {
     if (action === 'round-next') {
       const result = startNextWardensDebtRound(runtime.gameState, runtime.index);
       setWardensDebtGameState(result.gameState);
+      return;
+    }
+
+    if (action === 'complete-phase') {
+      const convictIndex = Number(actionButton.dataset.convictIndex);
+      updateWardensDebtGameStateViaAction('complete-phase', { convictIndex });
+      return;
+    }
+
+    if (action === 'complete-subphase') {
+      const convictIndex = Number(actionButton.dataset.convictIndex);
+      const { phase, convictSubphases, phaseComplete } = runtime.gameState.turn;
+      const phaseConfig = PHASE_CONFIG[phase];
+      const currentSubphase = convictSubphases[convictIndex];
+
+      if (!phaseConfig?.subphases || !currentSubphase) return;
+
+      const currentIdx = phaseConfig.subphases.indexOf(currentSubphase);
+      if (currentIdx === -1) return;
+
+      // Apply the subphase advance
+      const newConvictSubphases = [...convictSubphases];
+      const newPhaseComplete = [...phaseComplete];
+      const isLastSubphase = currentIdx === phaseConfig.subphases.length - 1;
+
+      if (isLastSubphase) {
+        newConvictSubphases[convictIndex] = null;
+        newPhaseComplete[convictIndex] = true;
+      } else {
+        newConvictSubphases[convictIndex] = phaseConfig.subphases[currentIdx + 1];
+      }
+
+      const stateAfterSubphase = {
+        ...runtime.gameState,
+        turn: { ...runtime.gameState.turn, convictSubphases: newConvictSubphases, phaseComplete: newPhaseComplete },
+      };
+
+      // If all convicts are done, auto-advance phase
+      if (newPhaseComplete.every(done => done)) {
+        try {
+          const result = advanceWardensDebtPhase(stateAfterSubphase, runtime.index);
+          setWardensDebtGameState(result.gameState);
+        } catch (e) {
+          console.warn('Phase automation failed:', e.message);
+          // Advance phase anyway by manually setting it without automation
+          const currentPhaseIndex = WARDENS_DEBT_PHASE_SEQUENCE.indexOf(stateAfterSubphase.turn.phase);
+          const nextPhaseIndex = currentPhaseIndex === WARDENS_DEBT_PHASE_SEQUENCE.length - 1 ? 0 : currentPhaseIndex + 1;
+          const nextPhase = WARDENS_DEBT_PHASE_SEQUENCE[nextPhaseIndex];
+          const phaseConfig = PHASE_CONFIG[nextPhase];
+          const nextRound = nextPhaseIndex === 0 ? stateAfterSubphase.turn.round + 1 : stateAfterSubphase.turn.round;
+
+          const phaseAdvancedState = {
+            ...stateAfterSubphase,
+            turn: {
+              ...stateAfterSubphase.turn,
+              phase: nextPhase,
+              round: nextRound,
+              phaseComplete: stateAfterSubphase.convicts.map(() => false),
+              convictSubphases: stateAfterSubphase.convicts.map(() => phaseConfig?.subphases?.[0] || null),
+            },
+          };
+          setWardensDebtGameState(phaseAdvancedState);
+        }
+      } else {
+        setWardensDebtGameState(stateAfterSubphase);
+      }
+      return;
+    }
+
+    if (action === 'complete-phase-all') {
+      // Apply complete-phase-all action: mark all convicts done
+      const phaseComplete = runtime.gameState.turn.phaseComplete.map(() => true);
+      const stateAfterAction = {
+        ...runtime.gameState,
+        turn: { ...runtime.gameState.turn, phaseComplete },
+      };
+
+      // Auto-advance phase
+      try {
+        const result = advanceWardensDebtPhase(stateAfterAction, runtime.index);
+        setWardensDebtGameState(result.gameState);
+      } catch (e) {
+        console.warn('Phase advancement blocked:', e.message);
+        // If advance fails, at least update the phase completion
+        setWardensDebtGameState(stateAfterAction);
+      }
       return;
     }
 
@@ -902,6 +1101,8 @@ export function initElements() {
     });
   }
   settingsModal?.addEventListener('click', handleContainerClick);
+
+  document.getElementById('phase-actions')?.addEventListener('click', handleContainerClick);
 
   const popover = document.getElementById('wd-popover');
   popover?.addEventListener('click', event => {

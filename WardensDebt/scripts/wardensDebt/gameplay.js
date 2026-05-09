@@ -1,17 +1,17 @@
 import {
   cloneWardensDebtGameState,
   validateWardensDebtGameState,
+  PHASE_CONFIG,
 } from './schema.js';
 
 const MAX_PLAYER_HAND_SIZE = 8;
 export const WARDENS_DEBT_PHASE_SEQUENCE = [
-  'start-round',
-  'event-phase',
-  'planning-phase',
-  'select-cards',
-  'fast-cards',
+  'upkeep',
+  'events',
+  'tactics',
+  'fast-skills',
   'enemy-phase',
-  'slow-cards',
+  'slow-skills',
   'end-round',
 ];
 
@@ -162,6 +162,10 @@ function applySkillEffect(nextState, convict, effect, logEntries, targetRef, ran
       if (effect.target !== 'enemy') {
         throw new Error(`Unsupported deal_damage target "${effect.target}"`);
       }
+      if (!nextState.enemies || nextState.enemies.length === 0) {
+        logEntries.push(`${convict.name} would deal ${effect.amount ?? 0} damage, but no enemies present`);
+        return;
+      }
       const enemy = resolveEnemy(nextState, targetRef?.enemyIndex ?? 0);
       enemy.currentHealth = Math.max(0, enemy.currentHealth - (effect.amount ?? 0));
       logEntries.push(`${convict.name} dealt ${effect.amount ?? 0} damage to ${enemy.name}`);
@@ -188,6 +192,10 @@ function applySkillEffect(nextState, convict, effect, logEntries, targetRef, ran
       }
       if (!effect.conditionId) {
         throw new Error('apply_condition requires conditionId');
+      }
+      if (!nextState.enemies || nextState.enemies.length === 0) {
+        logEntries.push(`${convict.name} would apply ${effect.conditionId}, but no enemies present`);
+        return;
       }
       const enemy = resolveEnemy(nextState, targetRef?.enemyIndex ?? 0);
       enemy.conditions.push(effect.conditionId);
@@ -341,6 +349,11 @@ function setWardensDebtPhase(nextState, contentIndex, phase, round, triggerAutom
   nextState.turn.round = round;
   nextState.turn.phase = phase;
   nextState.turn.activeSide = activeSideForPhase(phase);
+  nextState.turn.phaseComplete = nextState.turn.phaseComplete.map(() => false);
+
+  const phaseConfig = PHASE_CONFIG[phase];
+  const initialSubphase = phaseConfig?.subphases?.[0] || null;
+  nextState.turn.convictSubphases = nextState.turn.convictSubphases.map(() => initialSubphase);
 
   const logEntries = [`Round ${round}: entered ${phase}`];
   const automationResult = {
@@ -349,13 +362,13 @@ function setWardensDebtPhase(nextState, contentIndex, phase, round, triggerAutom
     discardedSkills: [],
   };
 
-  if (triggerAutomations && phase === 'event-phase') {
+  if (triggerAutomations && phase === 'events') {
     automationResult.eventDraws = maybeTriggerEventPhaseDraw(nextState, contentIndex, logEntries);
   }
-  if (triggerAutomations && phase === 'fast-cards') {
+  if (triggerAutomations && phase === 'fast-skills') {
     automationResult.resolvedSkills = resolveWardensDebtQueuedSkillCards(nextState, contentIndex, 'fastSkills');
   }
-  if (triggerAutomations && phase === 'slow-cards') {
+  if (triggerAutomations && phase === 'slow-skills') {
     automationResult.resolvedSkills = resolveWardensDebtQueuedSkillCards(nextState, contentIndex, 'slowSkills');
   }
   if (triggerAutomations && phase === 'end-round') {
@@ -379,8 +392,37 @@ export function calculateWardensDebtDiceTotal(gameState) {
   }, 0);
 }
 
+export function advanceWardensDebtConvictSubphase(gameState, convictIndex) {
+  const nextState = cloneWardensDebtGameState(gameState);
+  const phase = nextState.turn.phase;
+  const phaseConfig = PHASE_CONFIG[phase];
+  const currentSubphase = nextState.turn.convictSubphases[convictIndex];
+
+  if (!phaseConfig?.subphases || phaseConfig.subphases.length === 0) {
+    throw new Error(`Phase "${phase}" does not have subphases`);
+  }
+
+  const currentIdx = phaseConfig.subphases.indexOf(currentSubphase);
+  if (currentIdx === -1) {
+    throw new Error(`Convict ${convictIndex} is not in a valid subphase for phase "${phase}"`);
+  }
+
+  const isLastSubphase = currentIdx === phaseConfig.subphases.length - 1;
+  if (isLastSubphase) {
+    nextState.turn.convictSubphases[convictIndex] = null;
+    nextState.turn.phaseComplete[convictIndex] = true;
+  } else {
+    nextState.turn.convictSubphases[convictIndex] = phaseConfig.subphases[currentIdx + 1];
+  }
+
+  return nextState;
+}
+
 export function advanceWardensDebtPhase(gameState, contentIndex) {
   const nextState = cloneWardensDebtGameState(gameState);
+  if (nextState.turn.phaseComplete.some(isComplete => !isComplete)) {
+    throw new Error('Cannot advance phase: not all convicts have completed the current phase');
+  }
   const currentPhaseIndex = WARDENS_DEBT_PHASE_SEQUENCE.indexOf(nextState.turn.phase);
   if (currentPhaseIndex === -1) {
     throw new Error(`Current phase "${nextState.turn.phase}" is not supported`);
@@ -737,8 +779,8 @@ export function playWardensDebtSkillCard(
   targetRef = {},
   randomIntInclusive = defaultRandomIntInclusive
 ) {
-  if (gameState.turn?.phase !== 'select-cards') {
-    throw new Error('Skill cards can only be played during the select-cards phase');
+  if (gameState.turn?.phase !== 'tactics' || gameState.turn?.convictSubphases?.[convictIndex] !== 'select-skill-cards') {
+    throw new Error('Skill cards can only be played during the select-skill-cards phase');
   }
   if (!Number.isInteger(handIndex) || handIndex < 0) {
     throw new Error('handIndex must be a non-negative integer');
@@ -798,8 +840,8 @@ export function unplayWardensDebtSkillCard(
   queueName,
   queueIndex
 ) {
-  if (gameState.turn?.phase !== 'select-cards') {
-    throw new Error('Cards can only be returned to hand during the select-cards phase');
+  if (gameState.turn?.phase !== 'tactics' || gameState.turn?.subphase !== 'select-skill-cards') {
+    throw new Error('Cards can only be returned to hand during the select-skill-cards phase');
   }
 
   const nextState = cloneWardensDebtGameState(gameState);
@@ -828,11 +870,11 @@ export function discardWardensDebtSkillCard(
   queueIndex
 ) {
   const phase = gameState.turn?.phase;
-  if (queueName === 'fastSkills' && phase !== 'fast-cards') {
-    throw new Error('Fast cards can only be discarded during the fast-cards phase');
+  if (queueName === 'fastSkills' && phase !== 'fast-skills') {
+    throw new Error('Fast cards can only be discarded during the fast-skills phase');
   }
-  if (queueName === 'slowSkills' && phase !== 'slow-cards') {
-    throw new Error('Slow cards can only be discarded during the slow-cards phase');
+  if (queueName === 'slowSkills' && phase !== 'slow-skills') {
+    throw new Error('Slow cards can only be discarded during the slow-skills phase');
   }
 
   const nextState = cloneWardensDebtGameState(gameState);

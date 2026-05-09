@@ -3,6 +3,41 @@ import { wardensDebtMapTileForId } from './mapTiles.js';
 
 export const WARDENS_DEBT_STATE_VERSION = '0.2.0';
 
+export const PHASE_CONFIG = {
+  'upkeep': {
+    subphases: null,
+    notification: { title: 'Upkeep', body: 'Doom increases. Check Mission and Agenda card effects. Special enemy and convict upkeep effects trigger.' }
+  },
+  'events': {
+    subphases: null,
+    notification: { title: 'Events', body: 'Draw 1 Event card per convict. Resolve event effects — enemies activate, tests may be triggered.' }
+  },
+  'tactics': {
+    subphases: ['select-tactic', 'select-skill-cards'],
+    notification: { title: 'Tactics', body: 'Select a tactic and skill cards for each convict.' },
+    subphaseNotifications: {
+      'select-tactic': { title: 'Select Tactic', body: 'Choose and resolve your tactic for this round.' },
+      'select-skill-cards': { title: 'Select Skill Cards', body: 'Select skill cards from your hand to queue for this round.' }
+    }
+  },
+  'fast-skills': {
+    subphases: null,
+    notification: { title: 'Fast Skills', body: 'Play fast skill cards from the active area. Resolve effects and tests. Hand cards can modify tests.' }
+  },
+  'enemy-phase': {
+    subphases: null,
+    notification: { title: 'Enemy Phase', body: 'Perform enemy actions as shown on activated Enemy cards.' }
+  },
+  'slow-skills': {
+    subphases: null,
+    notification: { title: 'Slow Skills', body: 'Play slow skill cards from the active area. Resolve effects and tests. Hand cards can modify tests.' }
+  },
+  'end-round': {
+    subphases: null,
+    notification: { title: 'End of Round', body: 'Resolve end-of-round effects on cards. Prepare for the next round.' }
+  },
+};
+
 const DECK_KINDS = new Set(['common-skill', 'enemy', 'event', 'item', 'location', 'agenda', 'mission']);
 const EFFECT_TYPES = new Set([
   'deal_damage',
@@ -16,14 +51,17 @@ const EFFECT_TYPES = new Set([
 const TURN_SIDES = new Set(['convicts', 'enemies']);
 const SKILL_TIMINGS = new Set(['fast', 'slow']);
 const TURN_PHASES = new Set([
-  'start-round',
-  'event-phase',
-  'planning-phase',
-  'select-cards',
-  'fast-cards',
+  'upkeep',
+  'events',
+  'tactics',
+  'fast-skills',
   'enemy-phase',
-  'slow-cards',
+  'slow-skills',
   'end-round',
+]);
+const TURN_SUBPHASES = new Set([
+  'select-tactic',
+  'select-skill-cards',
 ]);
 const ZONE_NAMES = new Set(['board', 'reserve', 'discard', 'banished']);
 
@@ -697,7 +735,9 @@ export function createWardensDebtGameState(content, scenarioId) {
     turn: {
       round: 1,
       activeSide: 'convicts',
-      phase: 'start-round',
+      phase: 'upkeep',
+      convictSubphases: convicts.map(() => null),
+      phaseComplete: convicts.map(() => false),
     },
     dicePool: scenario.setup.diceDefIds.map(dieId => {
       const die = index.diceDefsById.get(dieId);
@@ -792,6 +832,30 @@ export function validateWardensDebtGameState(gameState, contentIndex) {
     }
     if (!isNonEmptyString(gameState.turn.phase) || !TURN_PHASES.has(gameState.turn.phase)) {
       pushIssue(issues, 'turn.phase', 'must be a supported phase');
+    }
+    if (!Array.isArray(gameState.turn.convictSubphases)) {
+      pushIssue(issues, 'turn.convictSubphases', 'must be an array');
+    } else {
+      gameState.turn.convictSubphases.forEach((subphase, index) => {
+        if (subphase !== null && (!isNonEmptyString(subphase) || !TURN_SUBPHASES.has(subphase))) {
+          pushIssue(issues, `turn.convictSubphases[${index}]`, 'must be null or a supported subphase');
+        }
+      });
+      if (gameState.turn.convictSubphases.length !== (gameState.convicts?.length ?? 0)) {
+        pushIssue(issues, 'turn.convictSubphases', `must have ${gameState.convicts?.length ?? 0} entries (one per convict)`);
+      }
+    }
+    if (!Array.isArray(gameState.turn.phaseComplete)) {
+      pushIssue(issues, 'turn.phaseComplete', 'must be an array');
+    } else {
+      gameState.turn.phaseComplete.forEach((isComplete, index) => {
+        if (typeof isComplete !== 'boolean') {
+          pushIssue(issues, `turn.phaseComplete[${index}]`, 'must be a boolean');
+        }
+      });
+      if (gameState.turn.phaseComplete.length !== (gameState.convicts?.length ?? 0)) {
+        pushIssue(issues, 'turn.phaseComplete', `must have ${gameState.convicts?.length ?? 0} entries (one per convict)`);
+      }
     }
   }
 

@@ -9,6 +9,7 @@
  */
 
 import { snapWardensDebtBoardPoint } from './placement.js';
+import { PHASE_CONFIG } from './schema.js';
 
 export const ACTIONS = {
   // ─── Figure Movement ────────────────────────────────────────────────────────
@@ -250,6 +251,56 @@ export const ACTIONS = {
     const nextEnemies = [...gameState.enemies];
     nextEnemies[enemyIndex] = { ...enemy, conditions };
     return { ...gameState, enemies: nextEnemies };
+  },
+
+  // ─── Phase Completion ────────────────────────────────────────────────────────
+
+  'complete-phase': (gameState, { convictIndex }) => {
+    if (!Number.isInteger(convictIndex) || convictIndex < 0) return gameState;
+    const phaseComplete = [...gameState.turn.phaseComplete];
+    phaseComplete[convictIndex] = true;
+    return {
+      ...gameState,
+      turn: { ...gameState.turn, phaseComplete },
+    };
+  },
+
+  'complete-subphase': (gameState, { convictIndex }) => {
+    if (!Number.isInteger(convictIndex) || convictIndex < 0) return gameState;
+    const convictSubphases = [...gameState.turn.convictSubphases];
+    const phaseComplete = [...gameState.turn.phaseComplete];
+    const currentSubphase = convictSubphases[convictIndex];
+
+    if (!currentSubphase) return gameState;
+
+    const phase = gameState.turn.phase;
+    const phaseConfig = PHASE_CONFIG[phase];
+
+    if (!phaseConfig?.subphases) return gameState;
+
+    const currentIdx = phaseConfig.subphases.indexOf(currentSubphase);
+    if (currentIdx === -1) return gameState;
+
+    const isLastSubphase = currentIdx === phaseConfig.subphases.length - 1;
+    if (isLastSubphase) {
+      convictSubphases[convictIndex] = null;
+      phaseComplete[convictIndex] = true;
+    } else {
+      convictSubphases[convictIndex] = phaseConfig.subphases[currentIdx + 1];
+    }
+
+    return {
+      ...gameState,
+      turn: { ...gameState.turn, convictSubphases, phaseComplete },
+    };
+  },
+
+  'complete-phase-all': (gameState) => {
+    const phaseComplete = gameState.turn.phaseComplete.map(() => true);
+    return {
+      ...gameState,
+      turn: { ...gameState.turn, phaseComplete },
+    };
   },
 };
 

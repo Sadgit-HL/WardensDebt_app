@@ -51,11 +51,40 @@ function pushWdUndo(encoded) {
 
 function clearWdRedo() { wdRedoHashes.length = 0; }
 
+function migrateWardensDebtGameState(gameState) {
+  const OLD_PHASE_MAP = {
+    'start-round': 'upkeep',
+    'event-phase': 'events',
+    'planning-phase': 'tactics',
+    'select-cards': 'tactics',
+    'fast-cards': 'fast-skills',
+    'slow-cards': 'slow-skills',
+  };
+
+  if (gameState.turn.phase && OLD_PHASE_MAP[gameState.turn.phase]) {
+    gameState.turn.phase = OLD_PHASE_MAP[gameState.turn.phase];
+  }
+
+  if (!gameState.turn.phaseComplete) {
+    gameState.turn.phaseComplete = (gameState.convicts || []).map(() => false);
+  }
+
+  if (!gameState.turn.convictSubphases) {
+    const oldSubphase = gameState.turn.subphase || null;
+    gameState.turn.convictSubphases = (gameState.convicts || []).map(() => oldSubphase);
+  }
+
+  delete gameState.turn.subphase;
+
+  return gameState;
+}
+
 function loadWdStateFromUrl() {
   const encoded = new URLSearchParams(location.search).get('wd');
   if (!encoded || !runtimeState.index) return;
   try {
-    const saved = wdDecode(encoded);
+    let saved = wdDecode(encoded);
+    saved = migrateWardensDebtGameState(saved);
     const v = validateWardensDebtGameState(saved, runtimeState.index);
     if (v.ok) runtimeState.gameState = saved;
   } catch (e) {

@@ -97,13 +97,57 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  z-index: 30;
+  z-index: 50;
 }
 
 #left-bar {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+#phase-notification {
+  position: fixed;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: clamp(120px, 10vw, 180px);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.wd-notif-card {
+  background: rgba(10 10 30 / 0.82);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255 255 255 / 0.1);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.wd-notif-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: rgba(255 255 255 / 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.wd-notif-body {
+  font-size: 0.78rem;
+  color: rgba(255 255 255 / 0.85);
+  line-height: 1.45;
+}
+
+.wd-notif-card.is-subphase {
+  border-color: rgba(114 171 132 / 0.34);
+}
+
+.wd-notif-card.is-subphase .wd-notif-title {
+  color: #d5efdc;
 }
 
 /* Context menu popover (for empty space click) */
@@ -189,6 +233,125 @@ body {
   background: transparent;
   overflow-y: auto;
   z-index: 30;
+}
+
+/* Phase actions: per-convict completion buttons (right overlay) */
+#phase-actions {
+  position: fixed;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: clamp(110px, 9vw, 160px);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.wd-phase-action-card {
+  background: rgba(10 10 30 / 0.82);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255 255 255 / 0.1);
+  border-radius: 8px;
+  padding: 8px 10px;
+  pointer-events: auto;
+}
+
+.wd-phase-action-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: rgba(255 255 255 / 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.wd-convict-done-btn {
+  width: 100%;
+  padding: 6px 8px;
+  background: rgba(255 255 255 / 0.08);
+  border: 1px solid rgba(255 255 255 / 0.15);
+  border-radius: 4px;
+  color: rgba(255 255 255 / 0.7);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wd-convict-done-btn:hover:not(:disabled) {
+  background: rgba(255 255 255 / 0.12);
+  border-color: rgba(255 255 255 / 0.25);
+  color: rgba(255 255 255 / 0.9);
+}
+
+.wd-convict-done-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.wd-convict-done-btn.is-done {
+  background: rgba(114 171 132 / 0.2);
+  border-color: rgba(114 171 132 / 0.34);
+  color: #d5efdc;
+}
+
+.wd-convict-subphase-next {
+  width: 100%;
+  padding: 4px 6px;
+  background: rgba(100 150 255 / 0.1);
+  border: 1px solid rgba(100 150 255 / 0.2);
+  border-radius: 3px;
+  color: rgba(100 150 255 / 0.8);
+  font-size: 0.65rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wd-convict-subphase-next:hover:not(:disabled) {
+  background: rgba(100 150 255 / 0.15);
+  border-color: rgba(100 150 255 / 0.3);
+  color: rgba(100 150 255 / 1);
+}
+
+.wd-phase-complete-all {
+  width: 100%;
+  padding: 6px 8px;
+  background: rgba(200 200 200 / 0.1);
+  border: 1px solid rgba(200 200 200 / 0.2);
+  border-radius: 3px;
+  color: rgba(200 200 200 / 0.8);
+  font-size: 0.65rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wd-phase-complete-all:hover:not(:disabled) {
+  background: rgba(200 200 200 / 0.15);
+  border-color: rgba(200 200 200 / 0.3);
+  color: rgba(200 200 200 / 1);
+}
+
+.wd-phase-complete-all:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.wd-completion-status {
+  padding: 4px 8px;
+  font-size: 0.65rem;
+  color: rgba(255 255 255 / 0.6);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wd-completion-status::after {
+  color: #72ab84;
+  font-weight: 600;
 }
 
 /* Player UI: fixed to bottom, full width */
