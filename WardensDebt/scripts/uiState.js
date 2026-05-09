@@ -17,6 +17,10 @@ export const uiState = {
   mobileMoveMode:   false,
   emptyClickMenu:   null,
   settingsOpen:     false,
+  skillPickOpen:    false,
+  skillPickDeckIndex: null,
+  skillPickOfferedCards: [],
+  skillPickSelectedCard: null,
 };
 
 const listeners = [];
@@ -109,6 +113,20 @@ export function toggleCondPicker() { uiState.condPickerOpen = !uiState.condPicke
 export function closeCondPicker()  { uiState.condPickerOpen = false; notifyUI(); }
 export function openSettings()  { uiState.settingsOpen = true; notifyUI(); }
 export function closeSettings() { uiState.settingsOpen = false; notifyUI(); }
+export function openSkillPick(deckIndex, offeredCards) {
+  uiState.skillPickOpen = true;
+  uiState.skillPickDeckIndex = deckIndex;
+  uiState.skillPickOfferedCards = offeredCards;
+  uiState.skillPickSelectedCard = null;
+  notifyUI();
+}
+export function closeSkillPick() {
+  uiState.skillPickOpen = false;
+  uiState.skillPickDeckIndex = null;
+  uiState.skillPickOfferedCards = [];
+  uiState.skillPickSelectedCard = null;
+  notifyUI();
+}
 export function setMobilePanel(panel) {
   uiState.mobilePanel = panel;
   uiState.mobileDetailsOpen = false;

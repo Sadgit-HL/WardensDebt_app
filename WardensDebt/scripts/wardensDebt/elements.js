@@ -20,7 +20,7 @@ import {
   updateWardensDebtGameStateViaAction,
   subscribeWardensDebtRuntime,
 } from './runtime.js';
-import { uiState, selectFromStack, subscribeUI, openAddPanel, closeAddPanel, clearSelection, openSettings, closeSettings } from '../uiState.js';
+import { uiState, selectFromStack, subscribeUI, openAddPanel, closeAddPanel, clearSelection, openSettings, closeSettings, openSkillPick, closeSkillPick } from '../uiState.js';
 import { addPanel, handlePanelClick, wardensDebtObjectPanel, wardensDebtMapTilePanel } from '../sidebar.js';
 
 let activeConvictIndex = 0;
@@ -347,8 +347,6 @@ function renderPhaseStrip(runtime) {
     <div class="wd-phase-current">${escapeHtml(formatPhaseDisplay(phase))}</div>
     <div class="wd-phase-buttons">
       <button class="wd-playbar-mini-btn" data-wd-action="phase-prev" title="Previous Phase" aria-label="Previous Phase">‹</button>
-      <button class="wd-playbar-mini-btn" data-wd-action="phase-next" title="Next Phase" aria-label="Next Phase" ${disabledAttr}>›</button>
-      <button class="wd-playbar-mini-btn" data-wd-action="round-next" title="Next Round" aria-label="Next Round" ${disabledAttr}>R+</button>
     </div>
   `;
 }
@@ -652,6 +650,51 @@ function renderSettingsModal(runtime) {
   `;
 }
 
+function renderSkillPickPanel(runtime) {
+  const overlay = document.getElementById('skill-pick-overlay');
+  const panel = document.getElementById('skill-pick-panel');
+  if (!overlay || !panel) return;
+
+  if (!uiState.skillPickOpen) {
+    overlay.style.display = 'none';
+    return;
+  }
+
+  overlay.style.display = 'flex';
+
+  const offeredCardIds = uiState.skillPickOfferedCards || [];
+  const cardDefs = offeredCardIds
+    .map(id => ({ id, def: runtime.index?.skillDefsById?.get(id) }))
+    .filter(({ def }) => def);
+
+  const cardGrid = cardDefs
+    .map(({ id, def }) => {
+      const isSelected = uiState.skillPickSelectedCard === id;
+      const hoverHtml = skillCardHoverDetailHtml(def);
+      return `
+        <div class="skill-pick-card${isSelected ? ' selected' : ''}" data-wd-action="skill-pick-select" data-card-id="${escapeHtml(id)}">
+          <div class="skill-pick-card-title">${escapeHtml(def.name)}</div>
+          <div class="wd-card-hover" style="display:none">
+            ${hoverHtml}
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  const confirmDisabled = !uiState.skillPickSelectedCard ? 'disabled' : '';
+  panel.innerHTML = `
+    <h3 style="margin: 0 0 12px 0;">Select a Skill Card</h3>
+    <div class="skill-pick-grid">
+      ${cardGrid}
+    </div>
+    <div class="skill-pick-actions">
+      <button data-wd-action="skill-pick-cancel" type="button">Cancel</button>
+      <button data-wd-action="skill-pick-confirm" type="button" ${confirmDisabled}>Confirm</button>
+    </div>
+  `;
+}
+
 function renderInfoPanel() {
   const panel = document.getElementById('info-panel');
   if (!panel) return;
@@ -818,6 +861,7 @@ export function renderElements() {
     renderPhaseActions(runtime);
     renderDiceTray(runtime);
     renderInfoPanel();
+    renderSkillPickPanel(runtime);
     return;
   }
 
@@ -837,6 +881,7 @@ export function renderElements() {
     renderPhaseActions(runtime);
     renderDiceTray(runtime);
     renderInfoPanel();
+    renderSkillPickPanel(runtime);
     return;
   }
 
@@ -851,6 +896,7 @@ export function renderElements() {
   renderActiveStrip(runtime);
   renderSettingsButton(runtime);
   renderSettingsModal(runtime);
+  renderSkillPickPanel(runtime);
   renderObjectPopover(runtime);
   renderPhaseStrip(runtime);
   renderPhaseNotification(runtime);
@@ -882,6 +928,36 @@ function handleAction(actionButton) {
     const url = new URL(location.href);
     url.searchParams.delete('wd');
     location.replace(url.toString());
+    return;
+  }
+
+  if (action === 'skill-pick-select') {
+    const cardId = actionButton.dataset.cardId;
+    if (!cardId) return;
+    uiState.skillPickSelectedCard = cardId;
+    renderElements();
+    return;
+  }
+
+  if (action === 'skill-pick-confirm') {
+    const runtime = getWardensDebtRuntime();
+    if (runtime.status !== 'ready' || !runtime.gameState) return;
+    const deckIndex = uiState.skillPickDeckIndex;
+    const chosenCardId = uiState.skillPickSelectedCard;
+    const offeredCardIds = uiState.skillPickOfferedCards;
+    if (!Number.isInteger(deckIndex) || !chosenCardId || !offeredCardIds?.length) return;
+    updateWardensDebtGameStateViaAction('take-skill-card', {
+      deckIndex,
+      convictIndex: activeConvictIndex,
+      chosenCardId,
+      offeredCardIds,
+    });
+    closeSkillPick();
+    return;
+  }
+
+  if (action === 'skill-pick-cancel') {
+    closeSkillPick();
     return;
   }
 
@@ -1026,12 +1102,11 @@ function handleAction(actionButton) {
 
     if (action === 'draw-common') {
       const deckIndex = Number(actionButton.dataset.deckIndex);
-      const result = drawWardensDebtDeckCard(runtime.gameState, runtime.index, {
-        group: 'commonSkillDecks',
-        index: deckIndex,
-        convictIndex: activeConvictIndex,
-      });
-      setWardensDebtGameState(result.gameState);
+      const deck = runtime.gameState.decks?.commonSkillDecks?.[deckIndex];
+      if (deck && deck.drawPile.length > 0) {
+        const offered = deck.drawPile.slice(0, 4);
+        openSkillPick(deckIndex, offered);
+      }
       return;
     }
 
@@ -1165,6 +1240,17 @@ export function initElements() {
     });
   }
   settingsModal?.addEventListener('click', handleContainerClick);
+
+  const skillPickPanel = document.getElementById('skill-pick-panel');
+  const skillPickOverlay = document.getElementById('skill-pick-overlay');
+  if (skillPickOverlay) {
+    skillPickOverlay.addEventListener('click', event => {
+      if (event.target === skillPickOverlay) {
+        closeSkillPick();
+      }
+    });
+  }
+  skillPickPanel?.addEventListener('click', handleContainerClick);
 
   document.getElementById('phase-actions')?.addEventListener('click', handleContainerClick);
 

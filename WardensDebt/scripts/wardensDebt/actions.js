@@ -265,6 +265,31 @@ export const ACTIONS = {
     return { ...gameState, convicts: nextConvicts };
   },
 
+  // ─── Skill Card Selection ─────────────────────────────────────────────────────
+
+  'take-skill-card': (gameState, { deckIndex, convictIndex, chosenCardId, offeredCardIds }) => {
+    if (!Number.isInteger(deckIndex) || !Number.isInteger(convictIndex) || !chosenCardId || !offeredCardIds?.length) {
+      return gameState;
+    }
+    const deck = (gameState.decks?.commonSkillDecks || [])[deckIndex];
+    const convict = (gameState.convicts || [])[convictIndex];
+    if (!deck || !convict) return gameState;
+
+    const nextDecks = { ...gameState.decks, commonSkillDecks: [...gameState.decks.commonSkillDecks] };
+    const nextDeck = { ...deck, drawPile: [...deck.drawPile], discardPile: [...deck.discardPile] };
+    nextDecks.commonSkillDecks[deckIndex] = nextDeck;
+
+    const nextConvicts = [...gameState.convicts];
+    const nextConvict = { ...convict, hand: [...convict.hand] };
+
+    nextDeck.drawPile = nextDeck.drawPile.slice(offeredCardIds.length);
+    nextConvict.hand.push(chosenCardId);
+    offeredCardIds.filter(id => id !== chosenCardId).forEach(id => nextDeck.discardPile.push(id));
+
+    nextConvicts[convictIndex] = nextConvict;
+    return { ...gameState, decks: nextDecks, convicts: nextConvicts };
+  },
+
   // ─── Phase Completion ────────────────────────────────────────────────────────
 
   'complete-phase': (gameState, { convictIndex }) => {
