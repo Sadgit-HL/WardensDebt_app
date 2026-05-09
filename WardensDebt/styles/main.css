@@ -108,19 +108,20 @@ body {
 
 /* Context menu popover (for empty space click) */
 .wd-ctx-menu {
-  padding: 4px 0;
+  padding: 0;
 }
 
 .wd-ctx-item {
   display: block;
   width: 100%;
-  padding: 8px 14px;
+  padding: 6px 8px;
   background: none;
   border: none;
   color: #e8e8f0;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 16px;
+  line-height: 1;
 }
 
 .wd-ctx-item:hover {
