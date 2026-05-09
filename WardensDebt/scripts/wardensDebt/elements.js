@@ -413,6 +413,24 @@ function renderDeckStrip(runtime) {
     }).join('');
 
   deckStrip.innerHTML = groupsHtml || '';
+
+  deckStrip.querySelectorAll('.wd-deck-active-card-wrapper').forEach(wrapper => {
+    wrapper.addEventListener('mouseenter', (e) => {
+      const hoverBox = wrapper.querySelector('.wd-deck-active-card-hover');
+      if (!hoverBox) return;
+      const rect = hoverBox.getBoundingClientRect();
+      const overflow = rect.right - window.innerWidth + 8;
+      if (overflow > 0) {
+        hoverBox.style.left = `${-overflow}px`;
+      } else {
+        hoverBox.style.left = '0';
+      }
+    });
+    wrapper.addEventListener('mouseleave', () => {
+      const hoverBox = wrapper.querySelector('.wd-deck-active-card-hover');
+      if (hoverBox) hoverBox.style.left = '0';
+    });
+  });
 }
 
 function renderActiveStrip(runtime) {
@@ -425,6 +443,24 @@ function renderActiveStrip(runtime) {
   }
 
   activeStrip.innerHTML = queuedSkillSections(runtime);
+
+  activeStrip.querySelectorAll('.wd-card-hover-wrapper').forEach(wrapper => {
+    wrapper.addEventListener('mouseenter', (e) => {
+      const hoverBox = wrapper.querySelector('.wd-card-hover');
+      if (!hoverBox) return;
+      const rect = hoverBox.getBoundingClientRect();
+      const overflow = rect.right - window.innerWidth + 8;
+      if (overflow > 0) {
+        hoverBox.style.left = `${-overflow}px`;
+      } else {
+        hoverBox.style.left = '0';
+      }
+    });
+    wrapper.addEventListener('mouseleave', () => {
+      const hoverBox = wrapper.querySelector('.wd-card-hover');
+      if (hoverBox) hoverBox.style.left = '0';
+    });
+  });
 }
 
 function renderSettingsButton(runtime) {
@@ -580,6 +616,24 @@ function renderHandCards(runtime) {
   }).join('');
 
   handSection.innerHTML = handCards;
+
+  handSection.querySelectorAll('.wd-card-hover-wrapper').forEach(wrapper => {
+    wrapper.addEventListener('mouseenter', (e) => {
+      const hoverBox = wrapper.querySelector('.wd-card-hover');
+      if (!hoverBox) return;
+      const rect = hoverBox.getBoundingClientRect();
+      const overflow = rect.right - window.innerWidth + 8;
+      if (overflow > 0) {
+        hoverBox.style.left = `${-overflow}px`;
+      } else {
+        hoverBox.style.left = '0';
+      }
+    });
+    wrapper.addEventListener('mouseleave', () => {
+      const hoverBox = wrapper.querySelector('.wd-card-hover');
+      if (hoverBox) hoverBox.style.left = '0';
+    });
+  });
 }
 
 
