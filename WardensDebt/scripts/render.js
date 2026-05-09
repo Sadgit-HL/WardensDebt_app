@@ -297,10 +297,10 @@ function renderWardensDebtMap() {
       };
     }),
     ...(runtime.gameState.enemies || []).map((enemy, index) => {
-      const card = runtime.index?.monsterDefsById?.get(enemy.monsterDefId);
+      const card = runtime.index?.enemyDefsById?.get(enemy.enemyDefId);
       return {
         id: enemy.id,
-        label: figureInitials(card?.name || enemy.monsterDefId) + (index + 1),
+        label: figureInitials(card?.name || enemy.enemyDefId) + (index + 1),
         kind: 'enemy',
         hp: Number(enemy.currentHealth) || 0,
         maxHp: Number(enemy.maxHealth) || 0,

@@ -102,14 +102,14 @@ function addWardensDebtPlaceholderFigure(kind, defId) {
   }
 
   if (kind === 'enemy') {
-    const source = (defId && runtime.index.monsterDefsById.get(defId))
-      || [...runtime.index.monsterDefsById.values()][0];
+    const source = (defId && runtime.index.enemyDefsById.get(defId))
+      || [...runtime.index.enemyDefsById.values()][0];
     if (!source) return false;
     const nextIndex = runtime.gameState.enemies.length + 1;
     const enemyId = `enemy-${nextIndex}`;
     const enemy = {
       id: enemyId,
-      monsterDefId: source.id,
+      enemyDefId: source.id,
       name: `${WARDENS_DEBT_PLACEHOLDERS.enemy.name} ${nextIndex}`,
       currentHealth: source.health ?? 0,
       maxHealth: source.health ?? 0,
@@ -678,13 +678,13 @@ export function wardensDebtObjectPanel(kind, idx) {
 
   return `
     <button class="sp-panel-back" data-action="wd-show-roster">&#8592; Roster</button>
-    <div class="sp-obj-header sp-obj-header--selected${isConvict ? '' : ' sp-obj-header--monster'}">
+    <div class="sp-obj-header sp-obj-header--selected${isConvict ? '' : ' sp-obj-header--enemy'}">
       <div class="sp-obj-info">
         <div class="sp-title-row">
-          <div class="sp-type">${isConvict ? 'Convict' : 'Monster'}</div>
+          <div class="sp-type">${isConvict ? 'Convict' : 'Enemy'}</div>
         </div>
-        <div class="sp-name">${escHtml(obj.name || (isConvict ? `Convict ${idx + 1}` : `Monster ${idx + 1}`))}</div>
-        <div class="sp-meta-line">${escHtml(isConvict ? obj.convictDefId : obj.monsterDefId)}${angle ? ` · ${angle}°` : ''}</div>
+        <div class="sp-name">${escHtml(obj.name || (isConvict ? `Convict ${idx + 1}` : `Enemy ${idx + 1}`))}</div>
+        <div class="sp-meta-line">${escHtml(isConvict ? obj.convictDefId : obj.enemyDefId)}${angle ? ` · ${angle}°` : ''}</div>
       </div>
     </div>
     <div class="sp-action-section">
@@ -696,9 +696,9 @@ export function wardensDebtObjectPanel(kind, idx) {
         <button class="sp-icon-btn sp-icon-btn--danger" data-action="remove" title="Remove" ${locked ? 'disabled' : ''}>&#215;</button>
       </div>
     </div>
-    <div class="sp-stats sp-stats--monster">
+    <div class="sp-stats sp-stats--enemy">
       <div class="sp-subhead">Combat</div>
-      <div class="sp-stat-grid${isConvict ? ' sp-stat-grid--mercenary' : ' sp-stat-grid--monster'}">
+      <div class="sp-stat-grid${isConvict ? ' sp-stat-grid--mercenary' : ' sp-stat-grid--enemy'}">
         ${counter('HP', 'hp', hpValue, '#c0392b')}
         ${counter('Max HP', 'maxhp', Number(obj.maxHealth) || 0, '#2e7d32')}
       </div>
@@ -762,17 +762,17 @@ function wdConvictsTabBody(runtime, placement) {
   if (!defs.length) return hint('No convict definitions found.');
   return `
     <div class="ap-grid">
-      ${defs.map(def => `<button class="ap-item-btn ap-item-btn--monster" data-action="wd-add-figure" data-figure-kind="convict" data-figure-def-id="${escHtml(def.id)}" title="${escHtml(def.name)}">${escHtml(def.name)}</button>`).join('')}
+      ${defs.map(def => `<button class="ap-item-btn ap-item-btn--figure" data-action="wd-add-figure" data-figure-kind="convict" data-figure-def-id="${escHtml(def.id)}" title="${escHtml(def.name)}">${escHtml(def.name)}</button>`).join('')}
     </div>
   `;
 }
 
 function wdEnemiesTabBody(runtime, placement) {
-  const cards = [...runtime.index.monsterDefsById.values()];
+  const cards = [...runtime.index.enemyDefsById.values()];
   if (!cards.length) return hint('No enemy cards found.');
   return `
     <div class="ap-grid">
-      ${cards.map(card => `<button class="ap-item-btn ap-item-btn--monster" data-action="wd-add-figure" data-figure-kind="enemy" data-figure-def-id="${escHtml(card.id)}" title="${escHtml(card.name)}">${escHtml(card.name)}</button>`).join('')}
+      ${cards.map(card => `<button class="ap-item-btn ap-item-btn--figure" data-action="wd-add-figure" data-figure-kind="enemy" data-figure-def-id="${escHtml(card.id)}" title="${escHtml(card.name)}">${escHtml(card.name)}</button>`).join('')}
     </div>
   `;
 }
@@ -803,11 +803,11 @@ function wdSearchBody(query, runtime, placement) {
   const results = [];
   for (const def of runtime.index.convictDefsById.values()) {
     if (def.name.toLowerCase().includes(q))
-      results.push(`<button class="ap-item-btn ap-item-btn--monster" data-action="wd-add-figure" data-figure-kind="convict" data-figure-def-id="${escHtml(def.id)}">${escHtml(def.name)}</button>`);
+      results.push(`<button class="ap-item-btn ap-item-btn--figure" data-action="wd-add-figure" data-figure-kind="convict" data-figure-def-id="${escHtml(def.id)}">${escHtml(def.name)}</button>`);
   }
-  for (const card of runtime.index.monsterDefsById.values()) {
+  for (const card of runtime.index.enemyDefsById.values()) {
     if (card.name.toLowerCase().includes(q))
-      results.push(`<button class="ap-item-btn ap-item-btn--monster" data-action="wd-add-figure" data-figure-kind="enemy" data-figure-def-id="${escHtml(card.id)}">${escHtml(card.name)}</button>`);
+      results.push(`<button class="ap-item-btn ap-item-btn--figure" data-action="wd-add-figure" data-figure-kind="enemy" data-figure-def-id="${escHtml(card.id)}">${escHtml(card.name)}</button>`);
   }
   for (const tileId of Object.keys(WARDENS_DEBT_MAP_TILES)) {
     const label = tileId.replace('tile-', '');

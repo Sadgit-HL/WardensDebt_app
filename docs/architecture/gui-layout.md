@@ -51,7 +51,7 @@ Full-viewport board-centric layout with transparent overlays. Game board (SVG) c
 
   <!-- Fixed top bar (CSS grid: auto 1fr auto) -->
   <div id="top-bar">
-    <div id="wd-monster-strip"></div>     <!-- Monster type references (left) -->
+    <div id="wd-enemy-strip"></div>     <!-- Monster type references (left) -->
     <div id="wd-center-strips">
       <div id="wd-phase-strip"></div>     <!-- Phase navigation: center -->
       <div id="wd-counter-strip"></div>   <!-- Doom / Debt counters: center -->
@@ -143,7 +143,7 @@ Full-viewport board-centric layout with transparent overlays. Game board (SVG) c
   align-items: center;
 }
 
-#wd-monster-strip {
+#wd-enemy-strip {
   display: flex;
   gap: 6px;
   align-items: center;
@@ -198,7 +198,7 @@ Full-viewport board-centric layout with transparent overlays. Game board (SVG) c
 - **Background:** Semi-transparent with backdrop-filter blur
 - **Layout:** CSS grid `auto 1fr auto` — left-aligned | center | right-aligned columns
 - **Content:**
-  - Left (`#wd-monster-strip`): Enemy type reference thumbnails with hover infobox (name, HP, attack)
+  - Left (`#wd-enemy-strip`): Enemy type reference thumbnails with hover infobox (name, HP, attack)
   - Center (`#wd-center-strips`): 
     - `#wd-phase-strip` — current phase name + ‹/›/R+ navigation
     - `#wd-counter-strip` — Doom/Debt counters with ±
@@ -206,7 +206,7 @@ Full-viewport board-centric layout with transparent overlays. Game board (SVG) c
     - `#wd-skill-strip` (common skill deck)
     - `#wd-deck-strip` (Monster/Event/Item/Location/Agenda/Mission decks); vertical separators after skill, monster, event, item, location
 
-### #wd-monster-strip (Monster Type Reference)
+### #wd-enemy-strip (Monster Type Reference)
 - **Position:** Top-bar left section
 - **Content:** Thumbnail for each unique enemy type currently on the board
 - **Display:** Abbreviated name (first 3 chars) in compact 40×40 box
@@ -272,7 +272,7 @@ renderElements() → {
   renderConvictPortrait()   // #wd-playbar
   renderHandCards()         // #hand-section
   renderLeftBar()           // #left-bar (convict thumbnails + + button)
-  renderMonsterStrip()      // #wd-monster-strip (enemy type references)
+  renderEnemyStrip()      // #wd-enemy-strip (enemy type references)
   renderCounterStrip()      // #wd-counter-strip
   renderSkillStrip()        // #wd-skill-strip
   renderDeckStrip()         // #wd-deck-strip

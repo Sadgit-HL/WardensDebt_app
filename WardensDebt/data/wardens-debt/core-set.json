@@ -283,7 +283,7 @@
       ]
     }
   ],
-  "monsterDefs": [
+  "enemyDefs": [
     {
       "id": "monster-collector",
       "name": "Placeholder Collector",
@@ -472,7 +472,7 @@
       "mapTileIds": [
         "tile-41b"
       ],
-      "monsterCardIds": [],
+      "enemyCardIds": [],
       "tags": [
         "location",
         "intro-room",
@@ -525,7 +525,7 @@
     {
       "id": "monster-deck-a",
       "name": "Placeholder Monster Deck",
-      "kind": "monster",
+      "kind": "enemy",
       "cardIds": [
         "monster-collector"
       ]
@@ -587,7 +587,7 @@
         "commonSkillDeckIds": [
           "common-skill-deck-a"
         ],
-        "monsterDeckId": "monster-deck-a",
+        "enemyDeckId": "monster-deck-a",
         "eventDeckId": "event-deck-a",
         "itemDeckId": "item-deck-a",
         "locationDeckId": "location-deck-a",

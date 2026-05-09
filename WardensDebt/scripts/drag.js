@@ -1,5 +1,5 @@
 import { pixelToHex, hexCenter, HEX_W, HEX_H } from './hex.js';
-import { uiState, selectObject, setMobileMoveMode, selectWardensDebtCell, selectWardensDebtEmptyCell, selectWardensDebtMapTile } from './uiState.js';
+import { uiState, selectObject, setMobileMoveMode, selectWardensDebtCell, selectWardensDebtEmptyCell, selectWardensDebtMapTile, notifyUI } from './uiState.js';
 import { panBy, setZoomAroundClient, getZoom } from './controls.js';
 import { getWardensDebtRuntime, updateWardensDebtGameStateViaAction } from './wardensDebt/runtime.js';
 import { snapWardensDebtBoardPoint } from './wardensDebt/placement.js';
@@ -216,6 +216,7 @@ function onKeyup(e) {
 
 function onMousedown(e) {
   if (e.button !== 0) return;
+  uiState.emptyClickMenu = null;
   const wdRuntime = getWardensDebtRuntime();
   const wdFigure = wardensDebtFigureFromElement(e.target, wdRuntime);
   const wdTile = wardensDebtMapTileFromElement(e.target, wdRuntime);
@@ -400,7 +401,11 @@ function onMouseup(e) {
     }
 
     const snapped = snapWardensDebtBoardPoint({ x, y });
-    if (snapped) selectWardensDebtEmptyCell(snapped.x, snapped.y);
+    if (snapped) {
+      selectWardensDebtEmptyCell(snapped.x, snapped.y);
+      uiState.emptyClickMenu = { clientX: e.clientX, clientY: e.clientY };
+      notifyUI();
+    }
   }
 }
 

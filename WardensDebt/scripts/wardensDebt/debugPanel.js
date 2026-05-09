@@ -22,6 +22,7 @@ function createPanelElement() {
           <h2 class="wd-debug-title">Dice Test</h2>
         </div>
         <button type="button" class="wd-debug-reset" id="wd-debug-reset">Reload</button>
+        <button type="button" class="wd-debug-reset" id="wd-debug-clear-url">Clear URL</button>
       </div>
       <div class="wd-debug-status" id="wd-debug-status">Loading prototype content...</div>
       <div class="wd-debug-scenario" id="wd-debug-scenario"></div>
@@ -99,6 +100,7 @@ export async function initWardensDebtDebugPanel() {
   document.body.appendChild(panel);
 
   const resetButton = panel.querySelector('#wd-debug-reset');
+  const clearUrlButton = panel.querySelector('#wd-debug-clear-url');
   const rollAllButton = panel.querySelector('#wd-debug-roll-all');
   let statusMessage = '';
 
@@ -143,6 +145,12 @@ export async function initWardensDebtDebugPanel() {
       statusMessage = error instanceof Error ? error.message : String(error);
       renderPanel(panel, runtimeView(), statusMessage);
     }
+  });
+
+  clearUrlButton?.addEventListener('click', () => {
+    const url = new URL(location.href);
+    url.searchParams.delete('wd');
+    location.replace(url.toString());
   });
 
   await initWardensDebtRuntime();

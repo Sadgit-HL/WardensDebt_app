@@ -15,11 +15,12 @@ export const uiState = {
   mobilePanel:      'selection',
   mobileDetailsOpen:false,
   mobileMoveMode:   false,
+  emptyClickMenu:   null,
 };
 
 const listeners = [];
 export function subscribeUI(fn) { listeners.push(fn); }
-function notify() { listeners.forEach(fn => fn()); }
+export function notifyUI() { listeners.forEach(fn => fn()); }
 
 export function selectObject(kind, idx, col, row) {
   uiState.selectedHex  = { col, row };
@@ -31,21 +32,21 @@ export function selectObject(kind, idx, col, row) {
   uiState.mobilePanel  = 'selection';
   uiState.mobileDetailsOpen = false;
   uiState.mobileMoveMode = false;
-  notify();
+  notifyUI();
 }
 
 export function selectFromStack(kind, idx) {
   uiState.selected = { kind, idx };
   uiState.selectedWdMapTile = null;
   uiState.stack    = [];
-  notify();
+  notifyUI();
 }
 
 export function selectWardensDebtCell(x, y) {
   uiState.selectedHex = null;
   uiState.selectedCell = { x, y };
   uiState.stack = [];
-  notify();
+  notifyUI();
 }
 
 export function selectWardensDebtEmptyCell(x, y) {
@@ -54,7 +55,7 @@ export function selectWardensDebtEmptyCell(x, y) {
   uiState.selectedWdMapTile = null;
   uiState.selected = null;
   uiState.stack = [];
-  notify();
+  notifyUI();
 }
 
 export function selectWardensDebtMapTile(id) {
@@ -67,12 +68,12 @@ export function selectWardensDebtMapTile(id) {
   uiState.mobilePanel = 'selection';
   uiState.mobileDetailsOpen = false;
   uiState.mobileMoveMode = false;
-  notify();
+  notifyUI();
 }
 
 export function deselectObject() {
   uiState.selected = null;
-  notify();
+  notifyUI();
 }
 
 export function clearSelection() {
@@ -84,34 +85,34 @@ export function clearSelection() {
   uiState.addPanelOpen = false;
   uiState.mobileDetailsOpen = false;
   uiState.mobileMoveMode = false;
-  notify();
+  notifyUI();
 }
 
 export function toggleSection(key) {
   if (uiState.expandedSections.has(key)) uiState.expandedSections.delete(key);
   else                                    uiState.expandedSections.add(key);
-  notify();
+  notifyUI();
 }
 
-export function openAddPanel()  { uiState.addPanelOpen = true; uiState.mobileDetailsOpen = false; uiState.addPanelTab = 'monsters'; uiState.addPanelSearch = ''; notify(); }
-export function closeAddPanel() { uiState.addPanelOpen = false; uiState.addPanelSearch = ''; notify(); }
-export function setAddTab(tab)  { uiState.addPanelTab = tab; uiState.addPanelSearch = ''; notify(); }
+export function openAddPanel()  { uiState.addPanelOpen = true; uiState.mobileDetailsOpen = false; uiState.addPanelTab = 'monsters'; uiState.addPanelSearch = ''; notifyUI(); }
+export function closeAddPanel() { uiState.addPanelOpen = false; uiState.addPanelSearch = ''; notifyUI(); }
+export function setAddTab(tab)  { uiState.addPanelTab = tab; uiState.addPanelSearch = ''; notifyUI(); }
 export function rememberAdd(kind, id) {
   uiState.recentAdds = [
     { kind, id: Number(id) },
     ...uiState.recentAdds.filter(item => !(item.kind === kind && Number(item.id) === Number(id))),
   ].slice(0, 6);
-  notify();
+  notifyUI();
 }
-export function toggleCondPicker() { uiState.condPickerOpen = !uiState.condPickerOpen; notify(); }
-export function closeCondPicker()  { uiState.condPickerOpen = false; notify(); }
+export function toggleCondPicker() { uiState.condPickerOpen = !uiState.condPickerOpen; notifyUI(); }
+export function closeCondPicker()  { uiState.condPickerOpen = false; notifyUI(); }
 export function setMobilePanel(panel) {
   uiState.mobilePanel = panel;
   uiState.mobileDetailsOpen = false;
   uiState.addPanelOpen = false;
   uiState.addPanelSearch = '';
-  notify();
+  notifyUI();
 }
-export function openMobileDetails()  { uiState.mobileDetailsOpen = true; notify(); }
-export function closeMobileDetails() { uiState.mobileDetailsOpen = false; notify(); }
-export function setMobileMoveMode(active) { uiState.mobileMoveMode = Boolean(active); notify(); }
+export function openMobileDetails()  { uiState.mobileDetailsOpen = true; notifyUI(); }
+export function closeMobileDetails() { uiState.mobileDetailsOpen = false; notifyUI(); }
+export function setMobileMoveMode(active) { uiState.mobileMoveMode = Boolean(active); notifyUI(); }

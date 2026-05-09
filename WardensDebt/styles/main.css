@@ -61,7 +61,7 @@ body {
   z-index: 20;
 }
 
-#wd-monster-strip {
+#wd-enemy-strip {
   grid-column: 1;
   display: flex;
   gap: 6px;
@@ -106,46 +106,33 @@ body {
   gap: 8px;
 }
 
-#clear-url-btn {
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
-  color: rgba(255, 255, 255, 0.6);
+/* Context menu popover (for empty space click) */
+.wd-ctx-menu {
+  padding: 4px 0;
+}
+
+.wd-ctx-item {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  color: #e8e8f0;
+  text-align: left;
   cursor: pointer;
-  font-size: 16px;
-  line-height: 1;
-  padding: 6px 10px;
-  backdrop-filter: blur(6px);
+  font-size: 13px;
 }
 
-#clear-url-btn:hover {
-  background: rgba(0, 0, 0, 0.75);
-  color: #fff;
-}
-
-.wd-left-bar-add {
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
-  color: rgba(255, 255, 255, 0.6);
-  cursor: pointer;
-  font-size: 18px;
-  line-height: 1;
-  padding: 6px 10px;
-  backdrop-filter: blur(6px);
-}
-
-.wd-left-bar-add:hover {
-  background: rgba(0, 0, 0, 0.75);
-  color: #fff;
+.wd-ctx-item:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Monster strip: thumbnails and hover infobox */
-.wd-monster-thumb-wrapper {
+.wd-enemy-thumb-wrapper {
   position: relative;
 }
 
-.wd-monster-thumb {
+.wd-enemy-thumb {
   flex-shrink: 0;
   width: 40px;
   height: 40px;
@@ -164,12 +151,12 @@ body {
   padding: 0 4px;
 }
 
-.wd-monster-thumb:hover {
+.wd-enemy-thumb:hover {
   border-color: rgba(255 255 255 / 0.35);
   background: rgba(10 10 30 / 0.95);
 }
 
-.wd-monster-thumb-hover {
+.wd-enemy-thumb-hover {
   display: none;
   position: absolute;
   top: calc(100% + 6px);
@@ -186,7 +173,7 @@ body {
   pointer-events: none;
 }
 
-.wd-monster-thumb-wrapper:hover .wd-monster-thumb-hover {
+.wd-enemy-thumb-wrapper:hover .wd-enemy-thumb-hover {
   display: block;
 }
 
@@ -934,7 +921,7 @@ body {
   box-shadow: inset 3px 0 0 rgba(138 216 255 / 0.85), 0 0 0 1px rgba(138 216 255 / 0.05);
 }
 
-.sp-obj-header--monster {
+.sp-obj-header--enemy {
   align-items: stretch;
   background: linear-gradient(90deg, rgba(138 216 255 / 0.075), rgba(255 255 255 / 0.025));
 }
@@ -1444,7 +1431,7 @@ body {
   padding: 6px 10px 4px;
 }
 
-.sp-stats--monster {
+.sp-stats--enemy {
   margin-top: 8px;
   padding: 8px 10px 6px;
   border: 1px solid rgba(255 255 255 / 0.08);
@@ -1458,7 +1445,7 @@ body {
   gap: 6px;
 }
 
-.sp-stat-grid--monster {
+.sp-stat-grid--enemy {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -1486,7 +1473,7 @@ body {
   background: color-mix(in srgb, var(--stat-color) 7%, rgba(255 255 255 / 0.035));
 }
 
-.sp-stat-grid--monster .sp-stat-tile--hp .sp-counter-val {
+.sp-stat-grid--enemy .sp-stat-tile--hp .sp-counter-val {
   min-width: 30px;
   font-size: 19px;
 }
@@ -3321,7 +3308,7 @@ body {
     padding: 8px 12px 4px;
   }
 
-  .sp-stats--monster {
+  .sp-stats--enemy {
     padding: 10px 12px 8px;
   }
 
@@ -3333,7 +3320,7 @@ body {
     padding: 8px 8px 8px 11px;
   }
 
-  .sp-stat-grid--monster .sp-stat-tile--hp .sp-counter-val {
+  .sp-stat-grid--enemy .sp-stat-tile--hp .sp-counter-val {
     min-width: 32px;
     font-size: 22px;
   }

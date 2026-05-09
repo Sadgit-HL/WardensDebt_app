@@ -58,7 +58,7 @@ function resolveDeckState(decksState, deckRef) {
     };
   }
 
-  const singletonGroups = new Set(['monsterDeck', 'eventDeck', 'itemDeck', 'locationDeck', 'agendaDeck', 'missionDeck']);
+  const singletonGroups = new Set(['enemyDeck', 'eventDeck', 'itemDeck', 'locationDeck', 'agendaDeck', 'missionDeck']);
   if (!singletonGroups.has(deckRef.group)) {
     throw new Error(`Unsupported deck group "${deckRef.group}"`);
   }
@@ -223,7 +223,7 @@ function resolveActiveCardGroup(nextState, activeGroup) {
   }
 
   const deckGroupMap = {
-    monster: 'monsterDeck',
+    enemy: 'enemyDeck',
     event: 'eventDeck',
     item: 'itemDeck',
     location: 'locationDeck',
@@ -612,7 +612,7 @@ export function resolveWardensDebtActiveCardToDiscard(gameState, contentIndex, a
 }
 
 const DECK_GROUP_TO_ACTIVE_GROUP = {
-  monsterDeck: 'monster',
+  enemyDeck: 'enemy',
   eventDeck: 'event',
   itemDeck: 'item',
   locationDeck: 'location',

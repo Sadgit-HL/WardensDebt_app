@@ -66,7 +66,7 @@ function cardDetails(runtime, cardId) {
 }
 
 const ACTIVE_DECK_GROUPS = [
-  { deckGroup: 'monsterDeck', activeGroup: 'monster', label: 'Monster', indexKey: 'monsterDefsById', hasSep: true },
+  { deckGroup: 'enemyDeck', activeGroup: 'enemy', label: 'Enemy', indexKey: 'enemyDefsById', hasSep: true },
   { deckGroup: 'eventDeck', activeGroup: 'event', label: 'Event', indexKey: 'eventDefsById', perConvict: true, hasSep: true },
   { deckGroup: 'itemDeck', activeGroup: 'item', label: 'Item', indexKey: 'itemDefsById', hasSep: true },
   { deckGroup: 'locationDeck', activeGroup: 'location', label: 'Location', indexKey: 'locationDefsById', hasHover: true, hasSep: true },
@@ -79,7 +79,7 @@ function cardHoverDetailHtml(card, activeGroup) {
   if (card.text) parts.push(`<div class="wd-hover-text">${escapeHtml(card.text)}</div>`);
   if (activeGroup === 'location') {
     if (card.mapTileIds?.length) parts.push(`<div class="wd-hover-meta">Tiles: ${escapeHtml(card.mapTileIds.join(', '))}</div>`);
-    if (card.monsterCardIds?.length) parts.push(`<div class="wd-hover-meta">Monsters: ${escapeHtml(card.monsterCardIds.join(', '))}</div>`);
+    if (card.enemyCardIds?.length) parts.push(`<div class="wd-hover-meta">Enemies: ${escapeHtml(card.enemyCardIds.join(', '))}</div>`);
   }
   if (card.effects?.length) {
     const fx = card.effects.map(e =>
@@ -181,11 +181,11 @@ function renderLeftBar(runtime) {
     `;
   }).join('');
 
-  leftBar.innerHTML = html + `<button class="wd-left-bar-add" data-wd-action="open-add" title="Add figure">+</button>`;
+  leftBar.innerHTML = html;
 }
 
-function renderMonsterStrip(runtime) {
-  const strip = document.getElementById('wd-monster-strip');
+function renderEnemyStrip(runtime) {
+  const strip = document.getElementById('wd-enemy-strip');
   if (!strip) return;
 
   const enemies = runtime.gameState?.enemies || [];
@@ -198,19 +198,19 @@ function renderMonsterStrip(runtime) {
   const uniqueEnemies = [];
 
   for (const enemy of enemies) {
-    if (!seenDefIds.has(enemy.monsterDefId)) {
-      seenDefIds.add(enemy.monsterDefId);
-      const def = runtime.index?.monsterDefsById?.get(enemy.monsterDefId);
+    if (!seenDefIds.has(enemy.enemyDefId)) {
+      seenDefIds.add(enemy.enemyDefId);
+      const def = runtime.index?.enemyDefsById?.get(enemy.enemyDefId);
       if (def) {
-        uniqueEnemies.push({ ...def, id: enemy.monsterDefId });
+        uniqueEnemies.push({ ...def, id: enemy.enemyDefId });
       }
     }
   }
 
   strip.innerHTML = uniqueEnemies.map(def => `
-    <div class="wd-monster-thumb-wrapper">
-      <div class="wd-monster-thumb">${escapeHtml((def.name || def.id).slice(0, 3))}</div>
-      <div class="wd-monster-thumb-hover">
+    <div class="wd-enemy-thumb-wrapper">
+      <div class="wd-enemy-thumb">${escapeHtml((def.name || def.id).slice(0, 3))}</div>
+      <div class="wd-enemy-thumb-hover">
         <div class="wd-hover-title">${escapeHtml(def.name || def.id)}</div>
         <div class="wd-hover-text">HP: ${def.health ?? '—'}</div>
         <div class="wd-hover-text">ATK: ${def.attack ?? '—'}</div>
@@ -419,6 +419,19 @@ function renderObjectPopover(runtime) {
   const popover = document.getElementById('wd-popover');
   if (!popover) return;
 
+  if (uiState.emptyClickMenu) {
+    const { clientX, clientY } = uiState.emptyClickMenu;
+    const W = 160;
+    const left = Math.max(8, Math.min(clientX, window.innerWidth - W - 8));
+    const top = Math.max(8, clientY + 8);
+    popover.style.cssText = `display:block;left:${left}px;top:${top}px;width:${W}px;`;
+    popover.innerHTML = `
+      <div class="wd-ctx-menu">
+        <button class="wd-ctx-item" data-wd-action="open-add">Add figure</button>
+      </div>`;
+    return;
+  }
+
   if (runtime.status !== 'ready' || !runtime.gameState) {
     popover.style.display = 'none';
     return;
@@ -528,7 +541,7 @@ export function renderElements() {
     renderLoading(playbar);
     renderHandCards(runtime);
     renderLeftBar(runtime);
-    renderMonsterStrip(runtime);
+    renderEnemyStrip(runtime);
     renderCounterStrip(runtime);
     renderSkillStrip(runtime);
     renderDeckStrip(runtime);
@@ -544,7 +557,7 @@ export function renderElements() {
     renderError(playbar, runtime);
     renderHandCards(runtime);
     renderLeftBar(runtime);
-    renderMonsterStrip(runtime);
+    renderEnemyStrip(runtime);
     renderCounterStrip(runtime);
     renderSkillStrip(runtime);
     renderDeckStrip(runtime);
@@ -559,7 +572,7 @@ export function renderElements() {
   renderConvictPortrait(playbar, runtime);
   renderHandCards(runtime);
   renderLeftBar(runtime);
-  renderMonsterStrip(runtime);
+  renderEnemyStrip(runtime);
   renderCounterStrip(runtime);
   renderSkillStrip(runtime);
   renderDeckStrip(runtime);
@@ -571,6 +584,7 @@ export function renderElements() {
 }
 
 function handleAction(actionButton) {
+  uiState.emptyClickMenu = null;
   const action = actionButton.dataset.wdAction;
 
   if (action === 'open-add') {
@@ -730,14 +744,7 @@ export function initElements() {
   const activeSection = document.getElementById('active-section');
   const leftBar = document.getElementById('left-bar');
   const topBar = document.getElementById('top-bar');
-  const clearUrlBtn = document.getElementById('clear-url-btn');
   if (!playbar) return;
-
-  clearUrlBtn?.addEventListener('click', () => {
-    const url = new URL(location.href);
-    url.searchParams.delete('wd');
-    location.replace(url.toString());
-  });
 
   const playerUi = document.getElementById('player-ui');
   if (playerUi) {

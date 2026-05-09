@@ -3,7 +3,7 @@ import { wardensDebtMapTileForId } from './mapTiles.js';
 
 export const WARDENS_DEBT_STATE_VERSION = '0.2.0';
 
-const DECK_KINDS = new Set(['common-skill', 'monster', 'event', 'item', 'location', 'agenda', 'mission']);
+const DECK_KINDS = new Set(['common-skill', 'enemy', 'event', 'item', 'location', 'agenda', 'mission']);
 const EFFECT_TYPES = new Set([
   'deal_damage',
   'heal',
@@ -267,7 +267,7 @@ function validateConvictDef(card, skillDefIds, path, issues) {
   validateTaggable(card, path, issues);
 }
 
-function validateMonsterCard(card, path, issues) {
+function validateEnemyCard(card, path, issues) {
   if (!validateCardLike(card, path, issues)) return;
   if (!isNonNegativeInteger(card.health)) pushIssue(issues, `${path}.health`, 'must be a non-negative integer');
   if (!isNonNegativeInteger(card.attack)) pushIssue(issues, `${path}.attack`, 'must be a non-negative integer');
@@ -310,7 +310,7 @@ function validateMissionCard(card, conditionIds, path, issues) {
   });
 }
 
-function validateLocationCard(card, mapTileIds, monsterCardIds, path, issues) {
+function validateLocationCard(card, mapTileIds, enemyCardIds, path, issues) {
   if (!isPlainObject(card)) {
     pushIssue(issues, path, 'must be an object');
     return;
@@ -329,13 +329,13 @@ function validateLocationCard(card, mapTileIds, monsterCardIds, path, issues) {
     }
   });
 
-  if (!validateStringArray(card.monsterCardIds, `${path}.monsterCardIds`, issues)) {
+  if (!validateStringArray(card.enemyCardIds, `${path}.enemyCardIds`, issues)) {
     return;
   }
 
-  card.monsterCardIds.forEach((monsterCardId, index) => {
-    if (isNonEmptyString(monsterCardId) && !monsterCardIds.has(monsterCardId)) {
-      pushIssue(issues, `${path}.monsterCardIds[${index}]`, `references unknown monster card "${monsterCardId}"`);
+  card.enemyCardIds.forEach((enemyCardId, index) => {
+    if (isNonEmptyString(enemyCardId) && !enemyCardIds.has(enemyCardId)) {
+      pushIssue(issues, `${path}.enemyCardIds[${index}]`, `references unknown enemy card "${enemyCardId}"`);
     }
   });
 
@@ -411,7 +411,7 @@ function validateScenario(scenario, refs, path, issues) {
   });
 
   const optionalDeckRefs = [
-    ['monsterDeckId', refs.monsterDeckIds],
+    ['enemyDeckId', refs.enemyDeckIds],
     ['eventDeckId', refs.eventDeckIds],
     ['itemDeckId', refs.itemDeckIds],
     ['agendaDeckId', refs.agendaDeckIds],
@@ -482,7 +482,7 @@ export function validateWardensDebtContent(content) {
     'conditionDefs',
     'skillDefs',
     'convictDefs',
-    'monsterDefs',
+    'enemyDefs',
     'eventDefs',
     'itemDefs',
     'agendaDefs',
@@ -509,7 +509,7 @@ export function validateWardensDebtContent(content) {
   const convictDefIds = new Set(content.convictDefs.map(card => card.id).filter(isNonEmptyString));
   const conditionIds = new Set(content.conditionDefs.map(token => token.id).filter(isNonEmptyString));
   const mapTileIds = new Set(content.mapTileDefs.map(tile => tile.id).filter(isNonEmptyString));
-  const monsterDefIds = new Set(content.monsterDefs.map(card => card.id).filter(isNonEmptyString));
+  const enemyDefIds = new Set(content.enemyDefs.map(card => card.id).filter(isNonEmptyString));
 
   content.skillDefs.forEach((card, index) =>
     validateSkillCard(card, convictDefIds, conditionIds, `skillCards[${index}]`, issues)
@@ -519,7 +519,7 @@ export function validateWardensDebtContent(content) {
   content.convictDefs.forEach((card, index) =>
     validateConvictDef(card, skillDefIds, `convictDefs[${index}]`, issues)
   );
-  content.monsterDefs.forEach((card, index) => validateMonsterCard(card, `monsterDefs[${index}]`, issues));
+  content.enemyDefs.forEach((card, index) => validateEnemyCard(card, `enemyDefs[${index}]`, issues));
   content.eventDefs.forEach((card, index) =>
     validateEventCard(card, conditionIds, `eventCards[${index}]`, issues)
   );
@@ -534,12 +534,12 @@ export function validateWardensDebtContent(content) {
   );
   content.mapTileDefs.forEach((tile, index) => validateMapTile(tile, `mapTiles[${index}]`, issues));
   content.locationDefs.forEach((card, index) =>
-    validateLocationCard(card, mapTileIds, monsterDefIds, `locationCards[${index}]`, issues)
+    validateLocationCard(card, mapTileIds, enemyDefIds, `locationCards[${index}]`, issues)
   );
 
   const deckIdsByKind = new Map([
     ['common-skill', new Set(content.skillDefs.filter(card => card.role === 'common').map(card => card.id))],
-    ['monster', monsterDefIds],
+    ['enemy', enemyDefIds],
     ['event', new Set(content.eventDefs.map(card => card.id).filter(isNonEmptyString))],
     ['item', new Set(content.itemDefs.map(card => card.id).filter(isNonEmptyString))],
     ['location', new Set(content.locationDefs.map(card => card.id).filter(isNonEmptyString))],
@@ -552,7 +552,7 @@ export function validateWardensDebtContent(content) {
   const refs = {
     convictDefIds,
     commonSkillDeckIds: new Set(content.deckDefs.filter(deck => deck.kind === 'common-skill').map(deck => deck.id)),
-    monsterDeckIds: new Set(content.deckDefs.filter(deck => deck.kind === 'monster').map(deck => deck.id)),
+    enemyDeckIds: new Set(content.deckDefs.filter(deck => deck.kind === 'enemy').map(deck => deck.id)),
     eventDeckIds: new Set(content.deckDefs.filter(deck => deck.kind === 'event').map(deck => deck.id)),
     itemDeckIds: new Set(content.deckDefs.filter(deck => deck.kind === 'item').map(deck => deck.id)),
     locationDeckIds: new Set(content.deckDefs.filter(deck => deck.kind === 'location').map(deck => deck.id)),
@@ -579,7 +579,7 @@ export function indexWardensDebtContent(content) {
     conditionDefsById: new Map(content.conditionDefs.map(item => [item.id, item])),
     skillDefsById: new Map(content.skillDefs.map(item => [item.id, item])),
     convictDefsById: new Map(content.convictDefs.map(item => [item.id, item])),
-    monsterDefsById: new Map(content.monsterDefs.map(item => [item.id, item])),
+    enemyDefsById: new Map(content.enemyDefs.map(item => [item.id, item])),
     eventDefsById: new Map(content.eventDefs.map(item => [item.id, item])),
     itemDefsById: new Map(content.itemDefs.map(item => [item.id, item])),
     agendaDefsById: new Map(content.agendaDefs.map(item => [item.id, item])),
@@ -601,7 +601,7 @@ function buildDeckState(deck) {
 
 function buildEmptyActiveCards() {
   return {
-    monster: [],
+    enemy: [],
     event: [],
     item: [],
     location: [],
@@ -676,15 +676,15 @@ export function createWardensDebtGameState(content, scenarioId) {
     : null;
   const mapTileId = activeLocationCard?.mapTileIds?.[0] || null;
 
-  const enemies = (activeLocationCard?.monsterCardIds || []).map((monsterCardId, enemyIndex) => {
-    const monsterCard = index.monsterDefsById.get(monsterCardId);
+  const enemies = (activeLocationCard?.enemyCardIds || []).map((enemyCardId, enemyIndex) => {
+    const enemyCard = index.enemyDefsById.get(enemyCardId);
     return {
       id: `enemy-${enemyIndex + 1}`,
-      monsterDefId: monsterCardId,
-      name: monsterCard?.name || monsterCardId,
-      currentHealth: monsterCard?.health ?? 0,
-      maxHealth: monsterCard?.health ?? 0,
-      attack: monsterCard?.attack ?? 0,
+      enemyDefId: enemyCardId,
+      name: enemyCard?.name || enemyCardId,
+      currentHealth: enemyCard?.health ?? 0,
+      maxHealth: enemyCard?.health ?? 0,
+      attack: enemyCard?.attack ?? 0,
       conditions: [],
       zone: 'board',
     };
@@ -715,8 +715,8 @@ export function createWardensDebtGameState(content, scenarioId) {
         .map(deckId => index.deckDefsById.get(deckId))
         .filter(Boolean)
         .map(buildDeckState),
-      monsterDeck: (() => {
-        const deck = scenario.setup.monsterDeckId ? index.deckDefsById.get(scenario.setup.monsterDeckId) : null;
+      enemyDeck: (() => {
+        const deck = scenario.setup.enemyDeckId ? index.deckDefsById.get(scenario.setup.enemyDeckId) : null;
         return deck ? buildDeckState(deck) : null;
       })(),
       eventDeck: (() => {
@@ -888,8 +888,8 @@ export function validateWardensDebtGameState(gameState, contentIndex) {
     }
     if (!isNonEmptyString(enemy.id)) pushIssue(issues, `${path}.id`, 'must be a non-empty string');
     else enemyIds.add(enemy.id);
-    if (!isNonEmptyString(enemy.monsterDefId)) pushIssue(issues, `${path}.monsterDefId`, 'must be a non-empty string');
-    else if (contentIndex && !contentIndex.monsterDefsById.has(enemy.monsterDefId)) pushIssue(issues, `${path}.monsterDefId`, `references unknown monster definition "${enemy.monsterDefId}"`);
+    if (!isNonEmptyString(enemy.enemyDefId)) pushIssue(issues, `${path}.enemyDefId`, 'must be a non-empty string');
+    else if (contentIndex && !contentIndex.enemyDefsById.has(enemy.enemyDefId)) pushIssue(issues, `${path}.enemyDefId`, `references unknown enemy definition "${enemy.enemyDefId}"`);
     if (!validateStringArray(enemy.conditions, `${path}.conditions`, issues)) return;
   });
 
@@ -898,7 +898,7 @@ export function validateWardensDebtGameState(gameState, contentIndex) {
   }
 
   const activeCardGroups = [
-    ['monster', contentIndex?.monsterDefsById],
+    ['enemy', contentIndex?.enemyDefsById],
     ['event', contentIndex?.eventDefsById],
     ['item', contentIndex?.itemDefsById],
     ['location', contentIndex?.locationDefsById],
