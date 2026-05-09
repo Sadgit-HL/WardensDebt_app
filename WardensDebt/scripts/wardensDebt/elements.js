@@ -1297,6 +1297,7 @@ export function initElements() {
   leftBar?.addEventListener('click', handleContainerClick);
   topBar?.addEventListener('click', handleContainerClick);
   document.getElementById('settings-section')?.addEventListener('click', handleContainerClick);
+  document.getElementById('wd-dice-tray')?.addEventListener('click', handleContainerClick);
 
   const settingsModal = document.getElementById('settings-modal');
   const settingsOverlay = document.getElementById('settings-modal-overlay');
