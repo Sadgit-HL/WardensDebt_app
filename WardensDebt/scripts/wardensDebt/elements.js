@@ -767,7 +767,12 @@ export function initElements() {
   leftBar?.addEventListener('click', handleContainerClick);
   topBar?.addEventListener('click', handleContainerClick);
 
-  document.getElementById('wd-popover')?.addEventListener('click', handlePanelClick);
+  const popover = document.getElementById('wd-popover');
+  popover?.addEventListener('click', event => {
+    const actionButton = event.target.closest('[data-wd-action]');
+    if (actionButton) { handleAction(actionButton); return; }
+    handlePanelClick(event);
+  });
 
   const infoPanel = document.getElementById('info-panel');
   if (infoPanel) {
