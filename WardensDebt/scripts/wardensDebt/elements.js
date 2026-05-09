@@ -652,7 +652,6 @@ function handleAction(actionButton) {
       const convictIndex = Number(actionButton.dataset.convictIndex);
       if (!Number.isInteger(convictIndex) || !runtime.gameState.convicts[convictIndex]) return;
       activeConvictIndex = convictIndex;
-      selectFromStack('wd-convict', convictIndex);
       renderElements();
       return;
     }
