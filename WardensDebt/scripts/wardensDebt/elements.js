@@ -427,7 +427,7 @@ function renderObjectPopover(runtime) {
     popover.style.cssText = `display:block;left:${left}px;top:${top}px;width:${W}px;`;
     popover.innerHTML = `
       <div class="wd-ctx-menu">
-        <button class="wd-ctx-item" data-wd-action="open-add">Add figure</button>
+        <button class="wd-ctx-item" data-wd-action="open-add">+</button>
       </div>`;
     return;
   }
