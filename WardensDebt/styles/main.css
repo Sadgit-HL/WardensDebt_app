@@ -2695,6 +2695,7 @@ body {
 }
 
 .wd-dice-tray {
+  display: flex;
   align-items: center;
   gap: 5px;
 }
