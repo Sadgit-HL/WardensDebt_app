@@ -18,7 +18,7 @@ import {
   updateWardensDebtGameStateViaAction,
   subscribeWardensDebtRuntime,
 } from './runtime.js';
-import { uiState, selectFromStack, subscribeUI, openAddPanel, closeAddPanel, clearSelection } from '../uiState.js';
+import { uiState, selectFromStack, subscribeUI, openAddPanel, closeAddPanel, clearSelection, openSettings, closeSettings } from '../uiState.js';
 import { addPanel, handlePanelClick, wardensDebtObjectPanel, wardensDebtMapTilePanel } from '../sidebar.js';
 
 let activeConvictIndex = 0;
@@ -413,6 +413,28 @@ function renderSettingsButton(runtime) {
   `;
 }
 
+function renderSettingsModal(runtime) {
+  const overlay = document.getElementById('settings-modal-overlay');
+  const modal = document.getElementById('settings-modal');
+  if (!overlay || !modal) return;
+
+  if (!uiState.settingsOpen) {
+    overlay.style.display = 'none';
+    return;
+  }
+
+  overlay.style.display = 'flex';
+  modal.innerHTML = `
+    <div class="wd-settings-header">
+      <h2>Settings</h2>
+      <button class="wd-settings-close" data-wd-action="close-settings" aria-label="Close settings">✕</button>
+    </div>
+    <div class="wd-settings-content">
+      <button class="wd-settings-option" data-wd-action="reset-url">Reset URL</button>
+    </div>
+  `;
+}
+
 function renderInfoPanel() {
   const panel = document.getElementById('info-panel');
   if (!panel) return;
@@ -586,6 +608,7 @@ export function renderElements() {
   renderDeckStrip(runtime);
   renderActiveStrip(runtime);
   renderSettingsButton(runtime);
+  renderSettingsModal(runtime);
   renderObjectPopover(runtime);
   renderPhaseStrip(runtime);
   renderDiceTray(runtime);
@@ -602,7 +625,19 @@ function handleAction(actionButton) {
   }
 
   if (action === 'open-settings') {
-    console.log('Settings button clicked');
+    openSettings();
+    return;
+  }
+
+  if (action === 'close-settings') {
+    closeSettings();
+    return;
+  }
+
+  if (action === 'reset-url') {
+    const url = new URL(location.href);
+    url.searchParams.delete('wd');
+    location.replace(url.toString());
     return;
   }
 
@@ -781,6 +816,17 @@ export function initElements() {
   leftBar?.addEventListener('click', handleContainerClick);
   topBar?.addEventListener('click', handleContainerClick);
   document.getElementById('settings-section')?.addEventListener('click', handleContainerClick);
+
+  const settingsModal = document.getElementById('settings-modal');
+  const settingsOverlay = document.getElementById('settings-modal-overlay');
+  if (settingsOverlay) {
+    settingsOverlay.addEventListener('click', event => {
+      if (event.target === settingsOverlay) {
+        closeSettings();
+      }
+    });
+  }
+  settingsModal?.addEventListener('click', handleContainerClick);
 
   const popover = document.getElementById('wd-popover');
   popover?.addEventListener('click', event => {

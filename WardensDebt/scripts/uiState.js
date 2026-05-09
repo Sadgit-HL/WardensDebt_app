@@ -16,6 +16,7 @@ export const uiState = {
   mobileDetailsOpen:false,
   mobileMoveMode:   false,
   emptyClickMenu:   null,
+  settingsOpen:     false,
 };
 
 const listeners = [];
@@ -106,6 +107,8 @@ export function rememberAdd(kind, id) {
 }
 export function toggleCondPicker() { uiState.condPickerOpen = !uiState.condPickerOpen; notifyUI(); }
 export function closeCondPicker()  { uiState.condPickerOpen = false; notifyUI(); }
+export function openSettings()  { uiState.settingsOpen = true; notifyUI(); }
+export function closeSettings() { uiState.settingsOpen = false; notifyUI(); }
 export function setMobilePanel(panel) {
   uiState.mobilePanel = panel;
   uiState.mobileDetailsOpen = false;
