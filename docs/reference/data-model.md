@@ -80,7 +80,43 @@ All content is organized by type (not a flat "cards" bucket):
 }
 ```
 
-Supported effect types: `deal_damage`, `heal`, `draw_cards`, `gain_guard`, `summon_unit`, `apply_condition`, `roll_die`
+Supported effect types: `deal_damage`, `heal`, `draw_cards`, `gain_guard`, `summon_unit`, `apply_condition`, `roll_die`, `test`, `modify_test`
+
+**Test Effect** (new):
+```javascript
+{
+  type: 'test',
+  target: 'self' | 'enemy' | 'convict',
+  description: 'Strength Test',
+  difficulty: 8,
+  modifier: 0,                    // Optional test modifier
+  effectTable: [
+    {
+      range: [1, 4],
+      description: 'Weak (fail)',
+      effects: [{ type: 'gain_guard', target: 'self', amount: 1 }]
+    },
+    {
+      range: [5, 8],
+      description: 'Average (success)',
+      effects: [{ type: 'deal_damage', target: 'enemy', amount: 2 }]
+    },
+    {
+      range: [9, 12],
+      description: 'Strong (success)',
+      effects: [{ type: 'deal_damage', target: 'enemy', amount: 3 }]
+    }
+  ]
+}
+```
+
+Tests pause card resolution and display a modal with:
+- Dice pool (individual die buttons + "Roll All")
+- Test difficulty and total calculation
+- Modifier controls (+/- buttons)
+- Effect table showing each outcome range with probability percentages
+- Current result highlighted in the table
+- "Done" button to resolve and apply outcome effects
 
 ### convictDefs
 
@@ -194,14 +230,34 @@ Live game session state during play. Access via `getWardensDebtRuntime().gameSta
   turn: {
     round: 1,
     activeSide: 'convicts' | 'enemies',
-    phase: 'start-round' | 'event-phase' | 'select-cards' | 'fast-cards' | 'enemy-phase' | 'slow-cards' | 'end-round'
+    phase: 'upkeep' | 'events' | 'tactics' | 'fast-skills' | 'enemy-phase' | 'slow-skills' | 'end-round',
+    subphase: 'select-tactic' | 'select-skill-cards' | null  // Only during 'tactics' phase
   },
   
   // Dice and conditions
-  diceDefsPool: [
+  dicePool: [
     { dieId: 'd6-basic', sides: 6, currentValue: null }
   ],
   conditionSupply: ['marked', 'guarded', ...],  // Available tokens to place
+  
+  // Active test (if a test is currently being resolved)
+  activeTest: {
+    source: {
+      type: 'skill-card' | 'event' | 'enemy' | 'phase' | 'ability',
+      sourceId: 'event-prisoner-revolt',     // Card or effect ID
+      convictIndex: 0                         // Optional, for convict-specific tests
+    },
+    description: 'Strength Test',
+    difficulty: 8,
+    modifier: 0,
+    effectTable: [
+      { range: [1, 4], description: 'Weak (fail)', effects: [...] },
+      { range: [5, 8], description: 'Average (success)', effects: [...] },
+      { range: [9, 12], description: 'Strong (success)', effects: [...] }
+    ],
+    successEffects: [...],        // Applied if test passes (total >= difficulty)
+    failEffects: [...]            // Applied if test fails (total < difficulty)
+  } | null,
   
   // Convict instances (1+ per scenario)
   convicts: [
@@ -256,12 +312,12 @@ Live game session state during play. Access via `getWardensDebtRuntime().gameSta
   
   // Cards currently active in play
   activeCards: {
-    monster: [],
-    event: [],
-    item: [],
-    location: [],
-    agenda: [],
-    mission: [],
+    enemy: [],                    // Enemy cards in play
+    event: [],                    // Event cards in play
+    item: [],                     // Item cards in play
+    location: [],                 // Location cards in play
+    agenda: [],                   // Agenda cards in play
+    mission: [],                  // Mission cards in play
     fastSkills: [
       { convictIndex: 0, cardId: 'convict-a-starter-strike', resolved: false }
     ],
@@ -269,6 +325,14 @@ Live game session state during play. Access via `getWardensDebtRuntime().gameSta
       { convictIndex: 0, cardId: 'convict-a-starter-guard', resolved: false }
     ]
   },
+  
+  // Tactic selection (during tactics phase)
+  selectedTactics: {
+    [convictIndex]: 'tactic-id' | null
+  },
+  
+  // Event tracking during event phase
+  activeEventIndex: 0 | null,    // Which event card is currently active
   
   // Board state
   board: {
